@@ -67,7 +67,7 @@ with a new date at the top.
 
 ## Contact
 
-[ЗАПОВНІТЬ / FILL IN: contact e-mail address for privacy questions]
+[leeall7+gnssconf@gmail.com: contact e-mail address for privacy questions]
 
 ---
 
@@ -139,4 +139,4 @@ GNSS Filter перевіряє позицію GPS на пристрої кори
 
 ## Контакти
 
-[ЗАПОВНІТЬ: контактна електронна адреса для питань щодо конфіденційності]
+[leeall7+gnssconf@gmail.com: контактна електронна адреса для питань щодо конфіденційності]
