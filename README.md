@@ -34,8 +34,8 @@ a fake location.
 You need a Google account (Gmail), the same one you use in Google Play on the
 phone.
 
-1. Join the testers group: **[LINK TO GOOGLE GROUP]**
-   (or send your Gmail address to **[CONTACT E-MAIL]**).
+1. Join the testers group: **t.me/gnssfilter**
+   (or send your Gmail address to **leeall7+gnsstest@gmail.com**).
 2. Open the invitation link **on the phone**:
    **https://play.google.com/apps/testing/com.gnssfilter**
    and tap **Become a tester**.
@@ -207,8 +207,8 @@ GNSS Filter захищає навігацію на Android, коли GPS глу�
 Потрібен обліковий запис Google (Gmail), той самий, що в Google Play на
 телефоні.
 
-1. Приєднайтесь до групи тестувальників: **[ПОСИЛАННЯ НА GOOGLE GROUP]**
-   (або надішліть свою адресу Gmail на **[КОНТАКТНА АДРЕСА]**).
+1. Приєднайтесь до групи тестувальників: **t.me/gnssfilter**
+   (або надішліть свою адресу Gmail на **leeall7+gnsstest@gmail.com**).
 2. Відкрийте посилання-запрошення **на телефоні**:
    **https://play.google.com/apps/testing/com.gnssfilter**
    і натисніть **Стати тестувальником**.
