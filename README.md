@@ -22,7 +22,7 @@ a fake location.
 2. [First-time setup](#2-first-time-setup)
 3. [Everyday use](#3-everyday-use)
 4. [After every update](#4-after-every-update)
-5. [OBD2 adapter (optional)](#5-obd2-adapter-optional)
+5. [OBD2 adapter (recommended)](#5-obd2-adapter-recommended)
 6. [Manual point](#6-manual-point)
 7. [Sending logs and feedback](#7-sending-logs-and-feedback)
 8. [Free trial and purchase](#8-free-trial-and-purchase)
@@ -34,18 +34,19 @@ a fake location.
 You need a Google account (Gmail), the same one you use in Google Play on the
 phone.
 
-1. Join the testers group: **t.me/gnssfilter**
-   (or send your Gmail address to **leeall7+gnsstest@gmail.com**).
-2. Open the invitation link **on the phone**:
-   **https://play.google.com/apps/testing/com.gnssfilter**
+1. Write to **[t.me/gnssfilter](https://t.me/gnssfilter)** and send the Gmail
+   address you use on your phone. We add it to the tester list by hand, so it
+   may take a little while — no need to write twice.
+2. Once you get a reply confirming you're on the list, open this link **on
+   the phone**: **https://play.google.com/apps/testing/com.gnssfilter**
    and tap **Become a tester**.
 3. Install the app from Google Play using the link on that page.
 4. Please keep the app installed for at least **14 days** and actually drive
    with it. Google counts only testers who stay enrolled for the whole period,
    and the test helps only if the app is really used.
 
-Adding your address to the list is not enough. Step 2 is what makes you a
-tester.
+Sending your address is not enough by itself — step 2 is what actually makes
+you a tester.
 
 ## 2. First-time setup
 
@@ -58,13 +59,20 @@ app.
    Software information → Build number.)
 2. Open **Settings → System → Developer options → Select mock location app**
    and choose **GNSS Filter**.
-3. Open GNSS Filter and allow:
+3. In the same **Developer options** menu turn on **Force full GNSS
+   measurements**. It keeps the receiver tracking all constellations and
+   frequencies without power-saving pauses. On Android 12 and newer the app
+   requests this mode by itself, so there the switch is a safety net; on
+   Android 10–11 it is the only way to get it. The cost is somewhat higher
+   battery use while GPS is active. The name may differ slightly between
+   phone makers.
+4. Open GNSS Filter and allow:
    - **Precise location** (required);
    - **Notifications** (the status stays visible while the app works in the
      background);
    - **Nearby devices / Bluetooth** — only if you use an OBD2 adapter;
    - **Display over other apps** — only if you turn on the coloured status dot.
-4. Tap **Start**.
+5. Tap **Start**.
 
 If step 2 is skipped, the app shows a red card **Mock location not allowed**
 with a button **Open Developer options**.
@@ -93,11 +101,35 @@ reinstalled.** After each update repeat step 2 of the setup: Developer options
 → Select mock location app → GNSS Filter. If you forget, the app warns you with
 a red card, a notification **NOT WORKING** and a vibration.
 
-## 5. OBD2 adapter (optional)
+## 5. OBD2 adapter (recommended)
 
-With a Bluetooth OBD2 adapter (ELM327 type) the app reads the real wheel speed
-from the car. This makes protection noticeably more reliable while GPS is
-unavailable. The app works without it, only less accurately.
+**The highest reliability under GPS interference is achieved only with a
+Bluetooth OBD2 adapter.** With it the app reads the real wheel speed from the
+car, which a jammer cannot fake. While GPS is unavailable this is what keeps
+the estimated position accurate.
+
+Without an adapter the app still detects spoofing and jamming and still falls
+back to the network position. But it does not know how fast the car is moving:
+its own estimate then only briefly continues the motion at the last known
+speed, so between network fixes the position is rough and may lag.
+
+**Which adapter to choose**
+
+- It must be **ELM327-compatible** and use **classic Bluetooth** (sold as
+  "Bluetooth", "for Android", Bluetooth 2.0/3.0).
+- **Tested by us:** ELM327 Bluetooth **v1.5**, two-board version, chip
+  **PIC18F25K80**. If you can choose, take this one.
+- **Will not work:** Wi-Fi adapters, and adapters with Bluetooth LE only
+  (usually sold as "for iPhone / iOS", "Bluetooth 4.0"). Dual-mode adapters
+  (classic + LE) are fine.
+- **At your own risk:** cheap single-board clones marked **v2.1**. Many of them
+  support fewer car protocols and may fail to connect to older cars (roughly
+  before 2008). We have not tested them.
+- The car must have an OBD2 port (petrol cars in the EU since 2001, diesel
+  since 2004). Some electric cars do not answer standard OBD2 requests.
+
+If the adapter suits, the OBD line on the main screen shows **connected** and
+the speed.
 
 1. Plug the adapter into the car and pair it in the phone's **Bluetooth
    settings** (the PIN is usually 1234 or 0000).
@@ -115,10 +147,17 @@ correct it: copy coordinates from a map (for example `50.4724897, 30.4469780`),
 paste them into **Manual point** in Settings and tap **Set current point**.
 Protection must be running.
 
-This is a correction tool, not a way to set an arbitrary location. If the point
-is far from where the app believes you are, or there is nothing to compare it
-with yet, the app shows a warning and sets the point only after you explicitly
-confirm.
+This is a correction tool, not a way to set an arbitrary location, so it is
+limited:
+
+- the point must be **within 5 km** of the position the app already knows. A
+  point farther away is rejected, and there is no way to confirm it anyway;
+- right after **Start**, while the app has no GPS or network fix yet, there is
+  nothing to compare the point with, so it is not accepted. Wait for the first
+  fix and try again;
+- while protection is stopped, the point is not accepted at all.
+
+In each case the app shows a message with the reason.
 
 ## 7. Sending logs and feedback
 
@@ -128,7 +167,8 @@ where something looked wrong.
 1. Open **Diagnostics → Logs ↗**.
 2. Choose **24 hours** or **7 days**.
 3. The archive is saved to **Downloads/GnssFilter** on the phone. Send that
-   file to **[CONTACT E-MAIL]**.
+   file to **[t.me/gnssfilter](https://t.me/gnssfilter)** or to
+   **gnssfilter@gmail.com**.
 
 **The archive contains exact coordinates, time and speed of your trips.** Send
 it only if you are comfortable sharing that, and only to the address above.
@@ -167,8 +207,9 @@ reinstalling the app.
 
 No app sees satellites better than the phone's own receiver. If jamming covers
 all frequencies at once, there is no satellite solution; the app then navigates
-by estimate and the error grows with time. Without an OBD2 adapter the estimate
-is less accurate. This is physics, not a setting.
+by estimate and the error grows with time. Without an OBD2 adapter the app does
+not know the speed, so this estimate is only a short bridge between network
+fixes. This is physics, not a setting.
 
 ---
 
@@ -195,7 +236,7 @@ GNSS Filter захищає навігацію на Android, коли GPS глу�
 2. [Перше налаштування](#2-перше-налаштування)
 3. [Щоденне користування](#3-щоденне-користування)
 4. [Після кожного оновлення](#4-після-кожного-оновлення)
-5. [OBD2-адаптер (за бажанням)](#5-obd2-адаптер-за-бажанням)
+5. [OBD2-адаптер (бажано)](#5-obd2-адаптер-бажано)
 6. [Ручна точка](#6-ручна-точка)
 7. [Логи та зворотний зв'язок](#7-логи-та-зворотний-звязок)
 8. [Пробний період і покупка](#8-пробний-період-і-покупка)
@@ -207,9 +248,10 @@ GNSS Filter захищає навігацію на Android, коли GPS глу�
 Потрібен обліковий запис Google (Gmail), той самий, що в Google Play на
 телефоні.
 
-1. Приєднайтесь до групи тестувальників: **t.me/gnssfilter**
-   (або надішліть свою адресу Gmail на **leeall7+gnsstest@gmail.com**).
-2. Відкрийте посилання-запрошення **на телефоні**:
+1. Напишіть у **[t.me/gnssfilter](https://t.me/gnssfilter)** і надішліть Gmail-адресу,
+   яку використовуєте на телефоні. Ми додаємо адреси до списку вручну, тож це
+   може зайняти трохи часу — писати вдруге не треба.
+2. Коли отримаєте підтвердження, що вас додано, відкрийте на телефоні:
    **https://play.google.com/apps/testing/com.gnssfilter**
    і натисніть **Стати тестувальником**.
 3. Встановіть застосунок із Google Play за посиланням на тій сторінці.
@@ -217,7 +259,7 @@ GNSS Filter захищає навігацію на Android, коли GPS глу�
    із ним. Google зараховує лише тих, хто лишається в тесті весь цей час, а
    користь від тесту є тільки тоді, коли застосунком користуються.
 
-Самої адреси в списку недостатньо. Тестувальником вас робить саме крок 2.
+Самого надсилання адреси недостатньо — тестувальником вас робить саме крок 2.
 
 ## 2. Перше налаштування
 
@@ -229,13 +271,20 @@ Android дозволяє лише одному застосунку переда
    Про телефон → Відомості про ПЗ → Номер збірки.)
 2. Відкрийте **Налаштування → Система → Для розробників → Вибрати застосунок
    для фіктивного місцезнаходження** й оберіть **GNSS Filter**.
-3. Відкрийте GNSS Filter і дозвольте:
+3. У тому самому меню **Для розробників** увімкніть **Примусове ввімкнення
+   вимірювання всіх GNSS** (Force full GNSS measurements). Тоді приймач
+   відстежує всі сузір'я й частоти без енергоощадних пауз. На Android 12 і
+   новіших застосунок просить цей режим сам, тож там перемикач — підстраховка;
+   на Android 10–11 це єдиний спосіб його отримати. Ціна — дещо більша витрата
+   акумулятора, поки працює GPS. У різних виробників назва пункту може трохи
+   відрізнятись.
+4. Відкрийте GNSS Filter і дозвольте:
    - **точне місцезнаходження** (обов'язково);
    - **сповіщення** (стан видно, поки застосунок працює у фоні);
    - **пристрої поблизу / Bluetooth** — лише якщо користуєтесь OBD2-адаптером;
    - **показ поверх інших застосунків** — лише якщо вмикаєте кольорову крапку
      стану.
-4. Натисніть **Старт**.
+5. Натисніть **Старт**.
 
 Якщо пропустити крок 2, застосунок покаже червону картку **Мок-локацію не
 дозволено** з кнопкою **Відкрити меню розробника**.
@@ -265,11 +314,35 @@ Android дозволяє лише одному застосунку переда
 місцезнаходження → GNSS Filter. Якщо забудете, застосунок попередить червоною
 карткою, сповіщенням **НЕ ПРАЦЮЄ** і вібрацією.
 
-## 5. OBD2-адаптер (за бажанням)
+## 5. OBD2-адаптер (бажано)
 
-З Bluetooth OBD2-адаптером (типу ELM327) застосунок читає справжню швидкість
-коліс з автомобіля. Це помітно підвищує надійність захисту, поки GPS
-недоступний. Без адаптера застосунок теж працює, лише менш точно.
+**Найвища достовірність під завадами GPS досягається лише з Bluetooth
+OBD2-адаптером.** З ним застосунок читає справжню швидкість коліс з
+автомобіля, а її глушилка підробити не може. Саме це тримає точність
+розрахованої позиції, поки GPS недоступний.
+
+Без адаптера застосунок так само виявляє підміну й глушіння і так само
+переходить на позицію з мережі. Але він не знає, з якою швидкістю їде авто:
+власний розрахунок тоді лише коротко продовжує рух за останньою відомою
+швидкістю, тож між мережевими фіксами позиція груба й може запізнюватись.
+
+**Який адаптер обрати**
+
+- Він має бути **сумісний з ELM327** і працювати через **класичний Bluetooth**
+  (продається як «Bluetooth», «для Android», Bluetooth 2.0/3.0).
+- **Перевірено нами:** ELM327 Bluetooth **v1.5**, двоплатний, чіп
+  **PIC18F25K80**. Якщо є вибір, беріть саме такий.
+- **Не підійдуть:** Wi-Fi-адаптери та адаптери лише з Bluetooth LE (зазвичай
+  продаються як «для iPhone / iOS», «Bluetooth 4.0»). Двохрежимні (класичний +
+  LE) підходять.
+- **На власний ризик:** дешеві одноплатні клони з позначкою **v2.1**. Багато з
+  них підтримують менше автомобільних протоколів і можуть не з'єднатися зі
+  старшими авто (приблизно до 2008 року). Ми їх не перевіряли.
+- В автомобілі має бути роз'єм OBD2 (бензинові авто в ЄС з 2001 року, дизельні
+  з 2004). Деякі електромобілі не відповідають на стандартні запити OBD2.
+
+Якщо адаптер підходить, рядок OBD на головному екрані показує **з'єднано** і
+швидкість.
 
 1. Вставте адаптер в автомобіль і спаруйте його в **налаштуваннях Bluetooth**
    телефона (PIN зазвичай 1234 або 0000).
@@ -288,9 +361,16 @@ Android дозволяє лише одному застосунку переда
 вставте в поле **Ручна точка** в Налаштуваннях і натисніть **Встановити
 поточну точку**. Захист має бути запущений.
 
-Це засіб уточнення, а не спосіб задати довільне місце. Якщо точка далеко від
-того, де застосунок вас бачить, або звірити її поки нема з чим, застосунок
-покаже попередження й поставить точку лише після вашого явного підтвердження.
+Це засіб уточнення, а не спосіб задати довільне місце, тому він обмежений:
+
+- точка має бути **в межах 5 км** від позиції, яку застосунок уже знає. Дальшу
+  точку він відхилить, і підтвердити її «все одно» неможливо;
+- одразу після **Старту**, поки немає ні GPS-, ні мережевого фікса, звірити
+  точку нема з чим, тому вона не приймається. Дочекайтесь першого фікса й
+  спробуйте ще раз;
+- коли захист зупинено, точка не приймається взагалі.
+
+У кожному випадку застосунок показує повідомлення з причиною.
 
 ## 7. Логи та зворотний зв'язок
 
@@ -300,7 +380,8 @@ Android дозволяє лише одному застосунку переда
 1. Відкрийте **Діагностика → Логи ↗**.
 2. Оберіть **24 години** або **7 днів**.
 3. Архів збережеться в **Downloads/GnssFilter** на телефоні. Надішліть цей
-   файл на **[КОНТАКТНА АДРЕСА]**.
+   файл у **[t.me/gnssfilter](https://t.me/gnssfilter)** або на
+   **gnssfilter@gmail.com**.
 
 **В архіві точні координати, час і швидкість ваших поїздок.** Надсилайте його,
 лише якщо готові цим поділитись, і лише на адресу вище. Сам застосунок логи
@@ -339,5 +420,6 @@ Android дозволяє лише одному застосунку переда
 
 Жоден застосунок не бачить супутників краще за приймач телефона. Якщо глушіння
 накриває всі частоти одночасно, супутникового рішення не буде; тоді застосунок
-веде за розрахунком, і похибка з часом зростає. Без OBD2-адаптера розрахунок
-менш точний. Це фізика, а не налаштування.
+веде за розрахунком, і похибка з часом зростає. Без OBD2-адаптера застосунок
+не знає швидкості, тож цей розрахунок — лише короткий місток між мережевими
+фіксами. Це фізика, а не налаштування.

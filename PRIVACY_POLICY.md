@@ -1,6 +1,6 @@
 # Privacy Policy — GNSS Filter
 
-Last updated: 20 September 2026
+Last updated: 21 September 2026
 
 *Українська версія — нижче / Ukrainian version below.*
 
@@ -60,6 +60,13 @@ on the device** (SharedPreferences). Uninstalling the app removes this data
 from the device; the purchase status is not lost, because Google Play keeps
 it separately, tied to the device's Google account.
 
+One value — the trial counter (a single number: kilometres of the free trial
+already used) — is additionally kept in the Block Store of Google Play
+services on the same device, so that the trial is not restarted by clearing
+the app's data or reinstalling it. If Google backup is enabled on the device,
+this number is included in the user's own encrypted Google backup. It
+contains no location or identifiers, and the developer has no access to it.
+
 ## Changes to this policy
 
 Material changes to this policy will be announced by updating this document
@@ -67,13 +74,13 @@ with a new date at the top.
 
 ## Contact
 
-[leeall7+gnssconf@gmail.com: contact e-mail address for privacy questions]
+gnssfilter@gmail.com
 
 ---
 
 # Політика конфіденційності — GNSS Filter (українською)
 
-Востаннє оновлено: 20.09.2026
+Востаннє оновлено: 21.09.2026
 
 ## Що робить застосунок
 
@@ -132,6 +139,14 @@ GNSS Filter перевіряє позицію GPS на пристрої кори
 ці дані з пристрою; статус покупки при цьому не втрачається, оскільки його
 окремо зберігає сам Google Play, прив'язано до Google-акаунту пристрою.
 
+Одне значення — лічильник пробного періоду (одне число: скільки кілометрів
+безкоштовного періоду вже використано) — додатково зберігається у сховищі
+Block Store сервісів Google Play на тому самому пристрої, щоб пробний період
+не починався заново після очищення даних застосунку чи перевстановлення. Якщо
+на пристрої ввімкнене резервне копіювання Google, це число потрапляє до
+власної зашифрованої резервної копії користувача. Воно не містить ні
+місцезнаходження, ні ідентифікаторів, і розробник доступу до нього не має.
+
 ## Зміни цієї політики
 
 Про суттєві зміни цієї політики буде повідомлено оновленням цього документа
@@ -139,4 +154,4 @@ GNSS Filter перевіряє позицію GPS на пристрої кори
 
 ## Контакти
 
-[leeall7+gnssconf@gmail.com: контактна електронна адреса для питань щодо конфіденційності]
+gnssfilter@gmail.com
