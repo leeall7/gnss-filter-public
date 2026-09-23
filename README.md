@@ -21,13 +21,14 @@ a fake location.
 1. [Join the test](#1-join-the-test)
 2. [First-time setup](#2-first-time-setup)
 3. [Everyday use](#3-everyday-use)
-4. [After every update](#4-after-every-update)
+4. [If the app was reinstalled](#4-if-the-app-was-reinstalled)
 5. [OBD2 adapter (recommended)](#5-obd2-adapter-recommended)
-6. [Manual point](#6-manual-point)
+6. [Car position on the map](#6-car-position-on-the-map)
 7. [Sending logs and feedback](#7-sending-logs-and-feedback)
 8. [Free trial and purchase](#8-free-trial-and-purchase)
 9. [Troubleshooting](#9-troubleshooting)
 10. [Honest limits](#10-honest-limits)
+11. [Terms of distribution](#11-terms-of-distribution)
 
 ## 1. Join the test
 
@@ -83,6 +84,10 @@ Tap **Start** before driving and **Stop** when you finish. The app keeps
 working with the screen off or while the navigator is in the foreground; a
 notification shows the current status.
 
+**Which navigator.** Best compatibility so far is with **Waze**: it follows the
+position smoothly under interference. Google Maps may show "searching for GPS"
+and move the marker in jumps while GPS is jammed; we are working on it.
+
 | Status | Meaning |
 |---|---|
 | **GPS trusted** (green) | GPS has passed the checks and is passed through |
@@ -94,12 +99,13 @@ notification shows the current status.
 The **Diagnostics** section at the bottom shows technical details. You do not
 need it for normal use, but it helps when you report a problem.
 
-## 4. After every update
+## 4. If the app was reinstalled
 
-**Android resets the mock location choice every time the app is updated or
-reinstalled.** After each update repeat step 2 of the setup: Developer options
-→ Select mock location app → GNSS Filter. If you forget, the app warns you with
-a red card, a notification **NOT WORKING** and a vibration.
+The mock location app is selected **once**: Android keeps this choice when the
+app is updated. Repeat step 2 of the setup (Developer options → Select mock
+location app → GNSS Filter) only if the app was **uninstalled and installed
+again**, or its **data was cleared**. If the choice is lost, the app warns you
+with a red card, a notification **NOT WORKING** and a vibration.
 
 ## 5. OBD2 adapter (recommended)
 
@@ -140,12 +146,22 @@ the speed.
 The app calibrates itself to your car while GPS is trusted. A tyre change is
 picked up automatically after a few minutes of driving.
 
-## 6. Manual point
+## 6. Car position on the map
 
-If you know exactly where you are and the app's position has drifted, you can
-correct it: copy coordinates from a map (for example `50.4724897, 30.4469780`),
-paste them into **Manual point** in Settings and tap **Set current point**.
-Protection must be running.
+The main screen has two numbered buttons: **1 Start** and, right below it,
+**2 Adjust car position on the map**. Press them in that order.
+
+If you know exactly where the car is and the app's position has drifted, or the
+app does not know which way the car is facing, tap **2**. The map opens centred
+on the app's current position:
+
+- drag the map so that the centre mark is where the car really is;
+- turn the arrow to the direction the car is facing;
+- tap **Accept**.
+
+If you only turned the arrow and did not move the map, only the direction is
+applied. When GPS is jammed and the app does not yet know the direction, it
+offers this screen by itself once per session.
 
 This is a correction tool, not a way to set an arbitrary location, so it is
 limited:
@@ -183,7 +199,7 @@ Questions and bug reports without personal data can also be posted in
 
 ## 8. Free trial and purchase
 
-20 km of active protection are free, with no feature limits. Only distance
+50 km of active protection are free, with no feature limits. Only distance
 driven while the app is actually substituting the position is counted, not
 your whole mileage. A trip that is already running is never interrupted. After
 the trial, the full version is a one-time purchase through Google Play, with
@@ -194,13 +210,14 @@ reinstalling the app.
 
 | Problem | What to do |
 |---|---|
-| Red card **Mock location not allowed** | Developer options → Select mock location app → GNSS Filter. Repeat after every update |
+| Red card **Mock location not allowed** | Developer options → Select mock location app → GNSS Filter. Needed once; again only after reinstalling the app or clearing its data |
 | **Start** does nothing, message about permission | Allow **Precise** location for the app (not "Approximate") |
 | No notification while running | Allow notifications for the app in Android settings |
 | The app stops in the background | Settings → Apps → GNSS Filter → Battery → **Unrestricted** |
 | OBD: "adapter not found among paired devices" | Pair the adapter in the phone's Bluetooth settings first, then choose it in the app |
 | OBD: "no data (ignition?)" | Turn the ignition on; some adapters respond only with the engine running |
 | The navigator shows a wrong place after Stop | Tap **Reset mock** in the app, or restart the navigator |
+| A taxi or delivery driver app reports location spoofing | Press **Stop**, then **Reset mock**. Such apps do not allow work while any mock location app is active (see section 10) |
 | The app is in the wrong language | Android 13+: Settings → Apps → GNSS Filter → Language |
 
 ## 10. Honest limits
@@ -210,6 +227,29 @@ all frequencies at once, there is no satellite solution; the app then navigates
 by estimate and the error grows with time. Without an OBD2 adapter the app does
 not know the speed, so this estimate is only a short bridge between network
 fixes. This is physics, not a setting.
+
+**Taxi and delivery drivers.** Taxi and courier driver apps do not allow work
+while GNSS Filter is active. The app does not distort your position, it only
+refines it, but it passes the position to the navigator through the same
+system mechanism (mock location) that these services treat as location
+spoofing. Press **Stop** while working in such an app, then **Reset mock**
+if the driver app still complains.
+
+## 11. Terms of distribution
+
+- The app is provided **as is**, without any warranty that it will work in
+  every situation, on every phone or with every car. It is an aid to
+  navigation, not a replacement for your own attention on the road.
+- Updates are released **gradually**: each new version is first checked by a
+  limited number of users and only then made available to everyone.
+- **Refunds.** The purchase is made through Google Play, and Google processes
+  the payment. Within 48 hours of the purchase you can request a refund
+  directly in Google Play; the decision is made by Google under its own
+  rules. After that period the developer does not issue refunds. The full
+  version is unlocked immediately after payment, so please use the free trial
+  (50 km of active protection, all features) to check the app on your phone
+  and in your car **before** buying.
+- These terms do not limit any rights you have under consumer protection law.
 
 ---
 
@@ -235,13 +275,14 @@ GNSS Filter захищає навігацію на Android, коли GPS глу�
 1. [Як стати тестувальником](#1-як-стати-тестувальником)
 2. [Перше налаштування](#2-перше-налаштування)
 3. [Щоденне користування](#3-щоденне-користування)
-4. [Після кожного оновлення](#4-після-кожного-оновлення)
+4. [Якщо застосунок перевстановили](#4-якщо-застосунок-перевстановили)
 5. [OBD2-адаптер (бажано)](#5-obd2-адаптер-бажано)
-6. [Ручна точка](#6-ручна-точка)
+6. [Позиція авто на карті](#6-позиція-авто-на-карті)
 7. [Логи та зворотний зв'язок](#7-логи-та-зворотний-звязок)
 8. [Пробний період і покупка](#8-пробний-період-і-покупка)
 9. [Якщо щось не працює](#9-якщо-щось-не-працює)
 10. [Чесно про межі](#10-чесно-про-межі)
+11. [Умови розповсюдження](#11-умови-розповсюдження)
 
 ## 1. Як стати тестувальником
 
@@ -295,6 +336,10 @@ Android дозволяє лише одному застосунку переда
 вимкненим екраном і тоді, коли на екрані навігатор; поточний стан видно у
 сповіщенні.
 
+**Який навігатор.** Найкраща сумісність наразі — з **Waze**: під завадою він
+веде позицію плавно. Google Maps, поки GPS глушать, може показувати «пошук GPS»
+і рухати позначку ривками; ми над цим працюємо.
+
 | Стан | Що означає |
 |---|---|
 | **GPS у довірі** (зелений) | GPS пройшов перевірки й пропускається далі |
@@ -306,12 +351,13 @@ Android дозволяє лише одному застосунку переда
 Розділ **Діагностика** внизу екрана показує технічні подробиці. Для звичайного
 користування він не потрібен, але допомагає, коли повідомляєте про проблему.
 
-## 4. Після кожного оновлення
+## 4. Якщо застосунок перевстановили
 
-**Android скидає вибір застосунку для фіктивного місцезнаходження після
-кожного оновлення чи перевстановлення.** Після кожного оновлення повторіть
-крок 2 налаштування: Для розробників → Вибрати застосунок для фіктивного
-місцезнаходження → GNSS Filter. Якщо забудете, застосунок попередить червоною
+Застосунок для фіктивного місцезнаходження обирається **один раз**: під час
+оновлення Android цей вибір зберігає. Повторити крок 2 налаштування (Для
+розробників → Вибрати застосунок для фіктивного місцезнаходження → GNSS Filter)
+потрібно лише тоді, коли застосунок **видалили й встановили заново** або
+**очистили його дані**. Якщо вибір злетів, застосунок попередить червоною
 карткою, сповіщенням **НЕ ПРАЦЮЄ** і вібрацією.
 
 ## 5. OBD2-адаптер (бажано)
@@ -354,12 +400,22 @@ OBD2-адаптером.** З ним застосунок читає справ�
 Застосунок сам підлаштовується під ваш автомобіль, поки GPS у довірі. Заміну
 шин він підхоплює автоматично за кілька хвилин їзди.
 
-## 6. Ручна точка
+## 6. Позиція авто на карті
 
-Якщо ви точно знаєте, де перебуваєте, а позиція в застосунку з'їхала, її можна
-виправити: скопіюйте координати з карти (наприклад `50.4724897, 30.4469780`),
-вставте в поле **Ручна точка** в Налаштуваннях і натисніть **Встановити
-поточну точку**. Захист має бути запущений.
+На головному екрані — дві пронумеровані кнопки: **1 Старт** і одразу під нею
+**2 Уточнити позицію авто на карті**. Натискайте їх у такому порядку.
+
+Якщо ви точно знаєте, де стоїть авто, а позиція в застосунку з'їхала, або
+застосунок не знає, куди авто повернуте, натисніть **2**. Карта відкриється з
+центром у поточній позиції застосунку:
+
+- посуньте карту, щоб позначка в центрі стала там, де авто насправді;
+- поверніть стрілку туди, куди дивиться авто;
+- натисніть **Прийняти**.
+
+Якщо ви лише повернули стрілку й не рухали карту, застосовується тільки
+напрямок. Коли GPS глушать і застосунок ще не знає напрямку, він сам
+запропонує цей екран — один раз за сеанс.
 
 Це засіб уточнення, а не спосіб задати довільне місце, тому він обмежений:
 
@@ -396,7 +452,7 @@ OBD2-адаптером.** З ним застосунок читає справ�
 
 ## 8. Пробний період і покупка
 
-20 км активного захисту безкоштовні, без обмеження функцій. Рахуються лише
+50 км активного захисту безкоштовні, без обмеження функцій. Рахуються лише
 кілометри, коли застосунок справді підставляє позицію, а не весь пробіг.
 Поїздка, яка вже триває, ніколи не переривається. Після пробного періоду
 повна версія купується один раз через Google Play, без підписки. Покупка
@@ -407,13 +463,14 @@ OBD2-адаптером.** З ним застосунок читає справ�
 
 | Проблема | Що зробити |
 |---|---|
-| Червона картка **Мок-локацію не дозволено** | Для розробників → Вибрати застосунок для фіктивного місцезнаходження → GNSS Filter. Повторювати після кожного оновлення |
+| Червона картка **Мок-локацію не дозволено** | Для розробників → Вибрати застосунок для фіктивного місцезнаходження → GNSS Filter. Потрібно один раз; повторно — лише після перевстановлення застосунку або очищення його даних |
 | **Старт** не спрацьовує, повідомлення про дозвіл | Дозвольте застосунку **точне** місцезнаходження (не «приблизне») |
 | Немає сповіщення під час роботи | Дозвольте сповіщення для застосунку в налаштуваннях Android |
 | Застосунок зупиняється у фоні | Налаштування → Застосунки → GNSS Filter → Акумулятор → **Без обмежень** |
 | OBD: «адаптер не знайдено серед спарених» | Спершу спаруйте адаптер у налаштуваннях Bluetooth телефона, потім оберіть його в застосунку |
 | OBD: «без даних (запалювання?)» | Увімкніть запалювання; деякі адаптери відповідають лише із заведеним двигуном |
 | Після Стоп навігатор показує не те місце | Натисніть **Скинути мок** у застосунку або перезапустіть навігатор |
+| Застосунок водія таксі чи доставки повідомляє про підміну геолокації | Натисніть **Стоп**, потім **Скинути мок**. Такі застосунки не дозволяють працювати, поки активний будь-який застосунок фіктивного місцезнаходження (див. розділ 10) |
 | Застосунок не тією мовою | Android 13+: Налаштування → Застосунки → GNSS Filter → Мова |
 
 ## 10. Чесно про межі
@@ -423,3 +480,27 @@ OBD2-адаптером.** З ним застосунок читає справ�
 веде за розрахунком, і похибка з часом зростає. Без OBD2-адаптера застосунок
 не знає швидкості, тож цей розрахунок — лише короткий місток між мережевими
 фіксами. Це фізика, а не налаштування.
+
+**Водіям таксі й доставки.** Застосунки для водіїв таксі й кур'єрів не
+дозволяють працювати, поки увімкнений GNSS Filter. Він не спотворює позицію, а
+лише уточнює її, але передає її навігатору тим самим системним механізмом
+(фіктивне місцезнаходження), який ці сервіси вважають підміною геолокації. На
+час роботи в такому застосунку натисніть **Стоп**, а якщо застосунок водія
+все одно скаржиться — **Скинути мок**.
+
+## 11. Умови розповсюдження
+
+- Застосунок надається **як є**, без гарантії, що він працюватиме в кожній
+  ситуації, на кожному телефоні й з кожним автомобілем. Це допомога в
+  навігації, а не заміна вашої власної уваги на дорозі.
+- Оновлення виходять **поступово**: кожну нову версію спершу перевіряє
+  обмежене число користувачів, і лише після цього вона стає доступна всім.
+- **Повернення коштів.** Покупка здійснюється через Google Play, платіж
+  обробляє Google. Протягом 48 годин після покупки ви можете подати запит на
+  повернення безпосередньо в Google Play; рішення ухвалює Google за своїми
+  правилами. Після цього строку розробник повернень не здійснює. Повна версія
+  відкривається одразу після оплати, тому, будь ласка, скористайтеся
+  безкоштовним пробним періодом (50 км активного захисту, усі функції), щоб
+  перевірити застосунок на своєму телефоні й у своєму авто **до** покупки.
+- Ці умови не обмежують прав, які вам надає законодавство про захист прав
+  споживачів.

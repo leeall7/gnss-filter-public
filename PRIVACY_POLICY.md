@@ -1,6 +1,6 @@
 # Privacy Policy — GNSS Filter
 
-Last updated: 21 September 2026
+Last updated: 23 September 2026
 
 *Українська версія — нижче / Ukrainian version below.*
 
@@ -21,6 +21,8 @@ fake GPS one. All processing happens **exclusively on the user's device**.
 | Accelerometer, gyroscope, barometer (phone sensors) | Motion detection, heading, altitude | On the device only |
 | Internet access | Only downloading ephemeris (satellite orbits) from the open IGS scientific archives: `igs.bkg.bund.de`, `igs.ign.fr` | The app sends nothing; it is a plain HTTPS file request, identical for everyone. As with any request to a web server, the server sees the device's IP address |
 | Local logs (`Android/data/com.gnssfilter/files/logs/`, 14 days) | Diagnostics and field testing | On the device only; the app never sends them anywhere by itself. The user may manually export or share a log file at their own discretion |
+| Map tiles (OpenStreetMap; satellite imagery from Esri) — only when you open the "Adjust car position on the map" screen | Letting you place the car and its heading on a map by hand | The tile servers receive requests for the map tiles you are viewing, as with any online map. The screen opens centred on the car, so these requests reveal the approximate area you are in (roughly a few hundred metres) to the tile provider (OpenStreetMap Foundation or Esri). No trip, identifier or exact coordinates are sent; tiles are cached in the app's cache folder |
+| Cell-tower records (`…/files/cells/`, up to 20 MB): identifiers and signal of the serving and neighbouring cells, the network fix, the app's own position at that moment, and the **number** of visible Wi-Fi networks (no Wi-Fi identifiers) | On-device learning of tower positions and network-fix behaviour, to improve positioning without GPS | **On the device only. Never transmitted anywhere**, not even by hand; the developer has no access to it |
 
 The app **does not collect, transmit or sell** any data to third parties.
 No analytics, no advertising SDKs, no trackers.
@@ -67,6 +69,14 @@ the app's data or reinstalling it. If Google backup is enabled on the device,
 this number is included in the user's own encrypted Google backup. It
 contains no location or identifiers, and the developer has no access to it.
 
+The same storage also keeps the app's sensor calibrations — the normal
+receiver gain level per frequency band, the vehicle speed-sensor correction
+factors and the gyroscope zero offset — and the two distance totals shown on
+the main screen (total distance driven with the app and distance without
+satellite navigation), so they are not lost when the app is reinstalled.
+These are a few numbers describing the phone, the car and the total mileage;
+they contain no location, no trip history and no identifiers.
+
 ## Changes to this policy
 
 Material changes to this policy will be announced by updating this document
@@ -80,7 +90,7 @@ gnssfilter@gmail.com
 
 # Політика конфіденційності — GNSS Filter (українською)
 
-Востаннє оновлено: 21.09.2026
+Востаннє оновлено: 23.09.2026
 
 ## Що робить застосунок
 
@@ -99,6 +109,8 @@ GNSS Filter перевіряє позицію GPS на пристрої кори
 | Акселерометр, гіроскоп, барометр (сенсори телефону) | Детектор руху, курс, висота | Лише на пристрої |
 | Доступ до інтернету | Лише завантаження ефемерид (орбіт супутників) з відкритих наукових архівів IGS: `igs.bkg.bund.de`, `igs.ign.fr` | Застосунок нічого не надсилає; це звичайний HTTPS-запит на файл, однаковий для всіх. Як і за будь-якого звернення до вебсервера, сервер бачить IP-адресу пристрою |
 | Локальні логи (`Android/data/com.gnssfilter/files/logs/`, 14 діб) | Діагностика й польові випробування | Лише на пристрої; застосунок сам їх нікуди не надсилає. Користувач може вручну експортувати чи поділитись файлом логу на власний розсуд |
+| Тайли карти (OpenStreetMap; супутникові знімки Esri) — лише коли ви відкриваєте екран «Уточнити позицію авто на карті» | Щоб поставити авто і його курс на карті вручну | Сервери карти отримують запити на фрагменти карти, які ви переглядаєте, як у будь-якій онлайн-карті. Екран відкривається з центром у позиції авто, тож ці запити розкривають постачальнику карти (OpenStreetMap Foundation або Esri) приблизну місцевість, де ви є (порядку кількох сотень метрів). Трек, ідентифікатори чи точні координати не передаються; тайли кешуються в теці кешу застосунку |
+| Записи про базові станції (`…/files/cells/`, до 20 МБ): ідентифікатори й сигнал обслуговуючої та сусідніх сот, мережевий фікс, власна позиція застосунку в цей момент і **кількість** видимих Wi-Fi-мереж (без ідентифікаторів Wi-Fi) | Навчання на пристрої: розташування вишок і поведінка мережевих фіксів, для кращого визначення позиції без GPS | **Лише на пристрої. Нікуди не передаються**, навіть вручну; розробник доступу до них не має |
 
 Застосунок **не збирає, не передає і не продає** жодні дані третім сторонам.
 Немає аналітики, немає рекламних SDK, немає трекерів.
@@ -146,6 +158,14 @@ Block Store сервісів Google Play на тому самому пристр
 на пристрої ввімкнене резервне копіювання Google, це число потрапляє до
 власної зашифрованої резервної копії користувача. Воно не містить ні
 місцезнаходження, ні ідентифікаторів, і розробник доступу до нього не має.
+
+У тому самому сховищі зберігаються калібрування датчиків — нормальний рівень
+підсилення приймача за смугами частот, поправки до швидкості з OBD і зсув
+нуля гіроскопа, — а також два підсумки пробігу з головного екрана (усього з
+застосунком і без супутникової навігації), щоб вони не губилися під час
+перевстановлення. Це кілька чисел, що описують телефон, автомобіль і загальний
+пробіг; вони не містять ні місцезнаходження, ні історії поїздок, ні
+ідентифікаторів.
 
 ## Зміни цієї політики
 
