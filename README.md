@@ -216,8 +216,8 @@ reinstalling the app.
 | The app stops in the background | Settings → Apps → GNSS Filter → Battery → **Unrestricted** |
 | OBD: "adapter not found among paired devices" | Pair the adapter in the phone's Bluetooth settings first, then choose it in the app |
 | OBD: "no data (ignition?)" | Turn the ignition on; some adapters respond only with the engine running |
-| The navigator shows a wrong place after Stop | Tap **Reset mock** in the app, or restart the navigator |
-| A taxi or delivery driver app reports location spoofing | Press **Stop**, then **Reset mock**. Such apps do not allow work while any mock location app is active (see section 10) |
+| The navigator shows a wrong place after Stop | Open GNSS Filter once — it removes any leftover mock location by itself — or restart the navigator |
+| A taxi or delivery driver app reports location spoofing | Press **Stop**. If it still complains, set Developer options → "Select mock location app" to "No app" (choose GNSS Filter again before the next drive). Such apps do not allow work while any mock location app is active (see section 10) |
 | The app is in the wrong language | Android 13+: Settings → Apps → GNSS Filter → Language |
 
 ## 10. Honest limits
@@ -232,8 +232,9 @@ fixes. This is physics, not a setting.
 while GNSS Filter is active. The app does not distort your position, it only
 refines it, but it passes the position to the navigator through the same
 system mechanism (mock location) that these services treat as location
-spoofing. Press **Stop** while working in such an app, then **Reset mock**
-if the driver app still complains.
+spoofing. Press **Stop** while working in such an app. If the driver app still
+complains, set Developer options → "Select mock location app" to "No app" and
+choose GNSS Filter again before your next drive.
 
 ## 11. Terms of distribution
 
@@ -469,8 +470,8 @@ OBD2-адаптером.** З ним застосунок читає справ�
 | Застосунок зупиняється у фоні | Налаштування → Застосунки → GNSS Filter → Акумулятор → **Без обмежень** |
 | OBD: «адаптер не знайдено серед спарених» | Спершу спаруйте адаптер у налаштуваннях Bluetooth телефона, потім оберіть його в застосунку |
 | OBD: «без даних (запалювання?)» | Увімкніть запалювання; деякі адаптери відповідають лише із заведеним двигуном |
-| Після Стоп навігатор показує не те місце | Натисніть **Скинути мок** у застосунку або перезапустіть навігатор |
-| Застосунок водія таксі чи доставки повідомляє про підміну геолокації | Натисніть **Стоп**, потім **Скинути мок**. Такі застосунки не дозволяють працювати, поки активний будь-який застосунок фіктивного місцезнаходження (див. розділ 10) |
+| Після Стоп навігатор показує не те місце | Відкрийте GNSS Filter — він сам прибере залишки фіктивного місцезнаходження — або перезапустіть навігатор |
+| Застосунок водія таксі чи доставки повідомляє про підміну геолокації | Натисніть **Стоп**. Якщо скаржиться далі — у параметрах розробника для «Вибрати застосунок для фіктивних місцезнаходжень» оберіть «Немає» (перед наступною поїздкою знову оберіть GNSS Filter). Такі застосунки не дозволяють працювати, поки активний будь-який застосунок фіктивного місцезнаходження (див. розділ 10) |
 | Застосунок не тією мовою | Android 13+: Налаштування → Застосунки → GNSS Filter → Мова |
 
 ## 10. Чесно про межі
@@ -485,8 +486,9 @@ OBD2-адаптером.** З ним застосунок читає справ�
 дозволяють працювати, поки увімкнений GNSS Filter. Він не спотворює позицію, а
 лише уточнює її, але передає її навігатору тим самим системним механізмом
 (фіктивне місцезнаходження), який ці сервіси вважають підміною геолокації. На
-час роботи в такому застосунку натисніть **Стоп**, а якщо застосунок водія
-все одно скаржиться — **Скинути мок**.
+час роботи в такому застосунку натисніть **Стоп**. Якщо застосунок водія все
+одно скаржиться — у параметрах розробника для «Вибрати застосунок для фіктивних
+місцезнаходжень» оберіть «Немає», а перед наступною поїздкою знову GNSS Filter.
 
 ## 11. Умови розповсюдження
 
