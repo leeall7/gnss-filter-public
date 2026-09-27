@@ -199,7 +199,7 @@ Questions and bug reports without personal data can also be posted in
 
 ## 8. Free trial and purchase
 
-50 km of active protection are free, with no feature limits. Only distance
+100 km of active protection are free, with no feature limits. Only distance
 driven while the app is actually substituting the position is counted, not
 your whole mileage. A trip that is already running is never interrupted. After
 the trial, the full version is a one-time purchase through Google Play, with
@@ -248,7 +248,7 @@ choose GNSS Filter again before your next drive.
   directly in Google Play; the decision is made by Google under its own
   rules. After that period the developer does not issue refunds. The full
   version is unlocked immediately after payment, so please use the free trial
-  (50 km of active protection, all features) to check the app on your phone
+  (100 km of active protection, all features) to check the app on your phone
   and in your car **before** buying.
 - These terms do not limit any rights you have under consumer protection law.
 
@@ -453,7 +453,7 @@ OBD2-адаптером.** З ним застосунок читає справ�
 
 ## 8. Пробний період і покупка
 
-50 км активного захисту безкоштовні, без обмеження функцій. Рахуються лише
+100 км активного захисту безкоштовні, без обмеження функцій. Рахуються лише
 кілометри, коли застосунок справді підставляє позицію, а не весь пробіг.
 Поїздка, яка вже триває, ніколи не переривається. Після пробного періоду
 повна версія купується один раз через Google Play, без підписки. Покупка
@@ -502,7 +502,7 @@ OBD2-адаптером.** З ним застосунок читає справ�
   повернення безпосередньо в Google Play; рішення ухвалює Google за своїми
   правилами. Після цього строку розробник повернень не здійснює. Повна версія
   відкривається одразу після оплати, тому, будь ласка, скористайтеся
-  безкоштовним пробним періодом (50 км активного захисту, усі функції), щоб
+  безкоштовним пробним періодом (100 км активного захисту, усі функції), щоб
   перевірити застосунок на своєму телефоні й у своєму авто **до** покупки.
 - Ці умови не обмежують прав, які вам надає законодавство про захист прав
   споживачів.
