@@ -15,6 +15,10 @@ on:
         description: 'Спрощення геометрії, м'
         required: false
         default: '2'
+      tile:
+        description: 'Розмір плитки, ° (0.025 — для слабких телефонів і міст)'
+        required: false
+        default: '0.025'
   schedule:
     - cron: '17 3 1 * *'      # першого числа щомісяця
 
@@ -62,10 +66,11 @@ jobs:
           BBOX: ${{ github.event.inputs.bbox }}
           TRACK: ${{ github.event.inputs.track }}
           TOL: ${{ github.event.inputs.tolerance }}
+          TILE: ${{ github.event.inputs.tile }}
         run: |
           set -e
           B="${{ steps.where.outputs.build }}"; V="${{ steps.where.outputs.verify }}"
-          ARGS="--tolerance ${TOL:-2}"
+          ARGS="--tolerance ${TOL:-2} --tile ${TILE:-0.025}"
           if [ "${TRACK}" = "false" ]; then ARGS="$ARGS --no-track"; fi
           if [ -n "${BBOX}" ]; then
             python3 "$B" ukraine-roads.osm.pbf region-roads.bin $ARGS --bbox "${BBOX}"
