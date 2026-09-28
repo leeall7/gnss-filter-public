@@ -32,7 +32,9 @@ CLASSES = {
     'motorway_link': 9, 'trunk_link': 10, 'primary_link': 11, 'secondary_link': 12, 'tertiary_link': 13,
     'track': 14,
 }
-TILE_UDEG = 100_000            # 0,1° у мікроградусах
+TILE_UDEG = 25_000             # 0,025° у мікроградусах (≈2,8 × 1,8 км); --tile змінює
+# Не беремо (службові, де авто не «їде дорогою»): проходи стоянок і drive-through.
+SKIP_SERVICE = {'parking_aisle', 'drive-through', 'drive_through', 'emergency_access'}
 MAGIC = b'UARDS001'
 
 
@@ -92,6 +94,36 @@ def simplify(pts, tol_m):
     return [p for p, k in zip(pts, keep) if k]
 
 
+def wanted(tags, keep_track):
+    """Клас дороги або None."""
+    hw = tags.get('highway')
+    if hw not in CLASSES or (hw == 'track' and not keep_track):
+        return None
+    if tags.get('area') == 'yes':
+        return None
+    if hw == 'service' and tags.get('service') in SKIP_SERVICE:
+        return None
+    return CLASSES[hw]
+
+
+def oneway_of(tags):
+    """0 — ні; 1 — у напрямку точок; 2 — проти.
+    Кільця (junction=roundabout/circular) і motorway односторонні й без тегу oneway:
+    в OSM їх малюють у напрямку руху, тож напрямок — з самої лінії."""
+    ow = tags.get('oneway', '')
+    if ow in ('yes', 'true', '1'):
+        return 1
+    if ow == '-1':
+        return 2
+    if ow in ('no', 'false', '0', 'reversible', 'alternating'):
+        return 0
+    if tags.get('junction') in ('roundabout', 'circular'):
+        return 1
+    if tags.get('highway') == 'motorway':
+        return 1
+    return 0
+
+
 # ------------------------------------------------------------- прохід 1
 class Pass1(osmium.SimpleHandler):
     """Збирає всі node-id доріг, які беремо, — щоб знайти перехрестя."""
@@ -104,10 +136,7 @@ class Pass1(osmium.SimpleHandler):
         self.n_ways = 0
 
     def way(self, w):
-        hw = w.tags.get('highway')
-        if hw not in CLASSES or (hw == 'track' and not self.keep_track):
-            return
-        if w.tags.get('area') == 'yes':
+        if wanted(w.tags, self.keep_track) is None:
             return
         self.n_ways += 1
         for n in w.nodes:
@@ -128,8 +157,9 @@ class Pass1(osmium.SimpleHandler):
 
 # ------------------------------------------------------------- прохід 2
 class Pass2(osmium.SimpleHandler):
-    def __init__(self, junctions, keep_track, tol_m, bbox):
+    def __init__(self, junctions, keep_track, tol_m, bbox, tile):
         super().__init__()
+        self.tile = tile
         self.j = junctions
         self.keep_track = keep_track
         self.tol = tol_m
@@ -150,21 +180,10 @@ class Pass2(osmium.SimpleHandler):
         return self.j[i] == r
 
     def way(self, w):
-        hw = w.tags.get('highway')
-        if hw not in CLASSES or (hw == 'track' and not self.keep_track):
+        cls = wanted(w.tags, self.keep_track)
+        if cls is None:
             return
-        if w.tags.get('area') == 'yes':
-            return
-        cls = CLASSES[hw]
-        ow = w.tags.get('oneway', '')
-        if ow in ('yes', 'true', '1'):
-            oneway = 1
-        elif ow == '-1':
-            oneway = 2
-        elif hw == 'motorway' and ow == '':
-            oneway = 1
-        else:
-            oneway = 0
+        oneway = oneway_of(w.tags)
         pts, refs = [], []
         for n in w.nodes:
             if not n.location.valid():
@@ -196,8 +215,9 @@ class Pass2(osmium.SimpleHandler):
         self.n_pts_out += len(pts)
         lats = [p[0] for p in pts]
         lons = [p[1] for p in pts]
-        ti0, ti1 = math.floor(min(lats) / TILE_UDEG), math.floor(max(lats) / TILE_UDEG)
-        tj0, tj1 = math.floor(min(lons) / TILE_UDEG), math.floor(max(lons) / TILE_UDEG)
+        T = self.tile
+        ti0, ti1 = math.floor(min(lats) / T), math.floor(max(lats) / T)
+        tj0, tj1 = math.floor(min(lons) / T), math.floor(max(lons) / T)
         self.n_seg += 1
         # відрізок потрапляє в кожну плитку, яку торкається його рамка (дублювання —
         # щоб пошук у 3×3 плитках навколо себе бачив і довгі відрізки траси)
@@ -210,7 +230,7 @@ class Pass2(osmium.SimpleHandler):
                 put_varint(buf, na)
                 put_varint(buf, nb)
                 put_varint(buf, len(pts))
-                plat, plon = ti * TILE_UDEG, tj * TILE_UDEG
+                plat, plon = ti * T, tj * T
                 for la, lo in pts:
                     put_svarint(buf, la - plat)
                     put_svarint(buf, lo - plon)
@@ -219,14 +239,14 @@ class Pass2(osmium.SimpleHandler):
 
 
 # ------------------------------------------------------------------- запис
-def write_container(path, tiles):
+def write_container(path, tiles, tile=TILE_UDEG):
     if not tiles:
         sys.exit('немає жодного відрізка — перевірте вхідний файл / bbox')
     tis = [t[0] for t in tiles]
     tjs = [t[1] for t in tiles]
     ti0, ti1, tj0, tj1 = min(tis), max(tis), min(tjs), max(tjs)
     n_lat, n_lon = ti1 - ti0 + 1, tj1 - tj0 + 1
-    header = MAGIC + struct.pack('>iiiiii', 1, TILE_UDEG, ti0 * TILE_UDEG, tj0 * TILE_UDEG, n_lat, n_lon)
+    header = MAGIC + struct.pack('>iiiiii', 1, tile, ti0 * tile, tj0 * tile, n_lat, n_lon)
     index_len = n_lat * n_lon * 12
     body = bytearray()
     index = bytearray()
@@ -260,6 +280,7 @@ def main():
     ap.add_argument('--bbox', help='minlat,minlon,maxlat,maxlon — лишити лише цю рамку', default=None)
     ap.add_argument('--tolerance', type=float, default=2.0, help='допуск спрощення геометрії, м (типово 2)')
     ap.add_argument('--no-track', action='store_true', help='не брати highway=track (польові/лісові)')
+    ap.add_argument('--tile', type=float, default=TILE_UDEG / 1e6, help='розмір плитки, ° (типово 0.025)')
     a = ap.parse_args()
     bbox = None
     if a.bbox:
@@ -275,13 +296,16 @@ def main():
     junctions = p1.junctions()
     print(f'прохід 1: доріг {p1.n_ways}, перехресть {len(junctions)}, {time.time() - t0:.0f} с', flush=True)
 
-    p2 = Pass2(junctions, keep_track, a.tolerance, bbox)
+    tile = int(round(a.tile * 1e6))
+    if tile < 5000 or tile > 1_000_000:
+        sys.exit('--tile: від 0.005 до 1')
+    p2 = Pass2(junctions, keep_track, a.tolerance, bbox, tile)
     p2.apply_file(a.src, locations=True, idx='flex_mem')
     print(f'прохід 2: відрізків {p2.n_seg}, точок {p2.n_pts_in} → {p2.n_pts_out} після спрощення, '
           f'поза рамкою {p2.n_dropped}, плиток {len(p2.tiles)}, {time.time() - t0:.0f} с', flush=True)
 
-    n_lat, n_lon, size, raw = write_container(a.dst, p2.tiles)
-    print(f'записано {a.dst}: сітка {n_lat}×{n_lon} плиток по 0,1°, {size / 1e6:.1f} МБ '
+    n_lat, n_lon, size, raw = write_container(a.dst, p2.tiles, tile)
+    print(f'записано {a.dst}: сітка {n_lat}×{n_lon} плиток по {tile / 1e6}°, {size / 1e6:.1f} МБ '
           f'(без стиснення {raw / 1e6:.1f} МБ), {time.time() - t0:.0f} с')
 
 
