@@ -92,9 +92,10 @@ jobs:
           retention-days: 30
 
       - name: Release
-        if: github.event.inputs.bbox == ''
+        # рамка (bbox) — як prerelease: «latest» його не бере, і застосунок далі тягне повну карту
         uses: softprops/action-gh-release@v2
         with:
+          prerelease: ${{ github.event.inputs.bbox != '' && github.event.inputs.bbox != null }}
           tag_name: roads-${{ steps.d.outputs.d }}-${{ github.run_number }}
           name: Дороги OSM для прив'язки, ${{ steps.d.outputs.d }}
           body: |
