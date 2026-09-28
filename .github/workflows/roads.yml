@@ -26,7 +26,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 180
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+
+      - name: Де скрипти
+        id: where
+        run: |
+          B=$(find . -name build_roads.py -not -path "*/node_modules/*" | head -1)
+          V=$(find . -name verify_roads.py | head -1)
+          if [ -z "$B" ] || [ -z "$V" ]; then echo "::error::не знайдено build_roads.py / verify_roads.py у репозиторії"; find . -maxdepth 3 -type d | head -50; exit 1; fi
+          echo "build=$B" >> "$GITHUB_OUTPUT"; echo "verify=$V" >> "$GITHUB_OUTPUT"
+          echo "build_roads: $B"; echo "verify_roads: $V"
 
       - name: Інструменти
         run: |
@@ -55,16 +64,17 @@ jobs:
           TOL: ${{ github.event.inputs.tolerance }}
         run: |
           set -e
+          B="${{ steps.where.outputs.build }}"; V="${{ steps.where.outputs.verify }}"
           ARGS="--tolerance ${TOL:-2}"
           if [ "${TRACK}" = "false" ]; then ARGS="$ARGS --no-track"; fi
           if [ -n "${BBOX}" ]; then
-            python3 tools/roads/build_roads.py ukraine-roads.osm.pbf region-roads.bin $ARGS --bbox "${BBOX}"
-            python3 tools/roads/verify_roads.py region-roads.bin | tee region-roads.txt
+            python3 "$B" ukraine-roads.osm.pbf region-roads.bin $ARGS --bbox "${BBOX}"
+            python3 "$V" region-roads.bin | tee region-roads.txt
           else
-            python3 tools/roads/build_roads.py ukraine-roads.osm.pbf ua-roads.bin $ARGS
-            python3 tools/roads/verify_roads.py ua-roads.bin | tee ua-roads.txt
-            python3 tools/roads/build_roads.py ukraine-roads.osm.pbf kyiv-roads.bin $ARGS --bbox 49.3,29.2,51.6,32.2
-            python3 tools/roads/verify_roads.py kyiv-roads.bin | tee kyiv-roads.txt
+            python3 "$B" ukraine-roads.osm.pbf ua-roads.bin $ARGS
+            python3 "$V" ua-roads.bin | tee ua-roads.txt
+            python3 "$B" ukraine-roads.osm.pbf kyiv-roads.bin $ARGS --bbox 49.3,29.2,51.6,32.2
+            python3 "$V" kyiv-roads.bin | tee kyiv-roads.txt
           fi
           ls -la *.bin
 
