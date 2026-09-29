@@ -13,8 +13,8 @@ a fake location.
 - All processing happens on the phone. Location data is never sent anywhere.
   [Privacy Policy](PRIVACY_POLICY.md)
 
-> This repository contains instructions and the privacy policy only.
-> The source code is not published.
+> This repository contains instructions, the privacy policy and the road
+> network tools. The app source code is not published.
 
 ## Contents
 
@@ -35,7 +35,7 @@ a fake location.
 You need a Google account (Gmail), the same one you use in Google Play on the
 phone.
 
-1. Write to gnssfilter@gmail.com and send the Gmail
+1. Write to **[t.me/gnssfilter](https://t.me/gnssfilter)** and send the Gmail
    address you use on your phone. We add it to the tester list by hand, so it
    may take a little while — no need to write twice.
 2. Once you get a reply confirming you're on the list, open this link **on
@@ -183,7 +183,8 @@ where something looked wrong.
 1. Open **Diagnostics → Logs ↗**.
 2. Choose **24 hours** or **7 days**.
 3. The archive is saved to **Downloads/GnssFilter** on the phone. Send that
-   file to **gnssfilter@gmail.com**.
+   file to **[t.me/gnssfilter](https://t.me/gnssfilter)** or to
+   **gnssfilter@gmail.com**.
 
 **The archive contains exact coordinates, time and speed of your trips.** Send
 it only if you are comfortable sharing that, and only to the address above.
@@ -289,7 +290,7 @@ GNSS Filter захищає навігацію на Android, коли GPS глу�
 Потрібен обліковий запис Google (Gmail), той самий, що в Google Play на
 телефоні.
 
-1. Напишіть листа на gnssfilter@gmail.com і надішліть Gmail-адресу,
+1. Напишіть у **[t.me/gnssfilter](https://t.me/gnssfilter)** і надішліть Gmail-адресу,
    яку використовуєте на телефоні. Ми додаємо адреси до списку вручну, тож це
    може зайняти трохи часу — писати вдруге не треба.
 2. Коли отримаєте підтвердження, що вас додано, відкрийте на телефоні:
@@ -309,7 +310,7 @@ Android дозволяє лише одному застосунку переда
 
 1. Відкрийте **Налаштування → Про телефон** і 7 разів торкніться **Номер
    збірки**. Це вмикає меню розробника. (На деяких телефонах: Налаштування →
-   Про телефон → Відомості про ПЗ → Номер збірки/версія MIUI)
+   Про телефон → Відомості про ПЗ → Номер збірки.)
 2. Відкрийте **Налаштування → Система → Для розробників → Вибрати застосунок
    для фіктивного місцезнаходження** й оберіть **GNSS Filter**.
 3. У тому самому меню **Для розробників** увімкніть **Примусове ввімкнення
@@ -360,7 +361,7 @@ Android дозволяє лише одному застосунку переда
 **очистили його дані**. Якщо вибір злетів, застосунок попередить червоною
 карткою, сповіщенням **НЕ ПРАЦЮЄ** і вібрацією.
 
-## 5. OBD2-адаптер (необхідно)
+## 5. OBD2-адаптер (бажано)
 
 **Найвища достовірність під завадами GPS досягається лише з Bluetooth
 OBD2-адаптером.** З ним застосунок читає справжню швидкість коліс з
@@ -370,7 +371,7 @@ OBD2-адаптером.** З ним застосунок читає справ�
 Без адаптера застосунок так само виявляє підміну й глушіння і так само
 переходить на позицію з мережі. Але він не знає, з якою швидкістю їде авто:
 власний розрахунок тоді лише коротко продовжує рух за останньою відомою
-швидкістю, тож позиція дуже груба.
+швидкістю, тож між мережевими фіксами позиція груба й може запізнюватись.
 
 **Який адаптер обрати**
 
@@ -436,7 +437,7 @@ OBD2-адаптером.** З ним застосунок читає справ�
 1. Відкрийте **Діагностика → Логи ↗**.
 2. Оберіть **24 години** або **7 днів**.
 3. Архів збережеться в **Downloads/GnssFilter** на телефоні. Надішліть цей
-   файл на
+   файл у **[t.me/gnssfilter](https://t.me/gnssfilter)** або на
    **gnssfilter@gmail.com**.
 
 **В архіві точні координати, час і швидкість ваших поїздок.** Надсилайте його,
@@ -505,3 +506,11 @@ OBD2-адаптером.** З ним застосунок читає справ�
   перевірити застосунок на своєму телефоні й у своєму авто **до** покупки.
 - Ці умови не обмежують прав, які вам надає законодавство про захист прав
   споживачів.
+
+---
+
+## Licenses / Ліцензії
+
+- Road network files (`ua-roads.bin`, `kyiv-roads.bin` in Releases): © OpenStreetMap contributors, [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/). Format: [tools/roads/FORMAT.md](tools/roads/FORMAT.md). See [LICENSE-DATA](LICENSE-DATA).
+- Схема доріг (`ua-roads.bin`, `kyiv-roads.bin` у Releases): © учасники OpenStreetMap, [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/). Формат: [tools/roads/FORMAT.md](tools/roads/FORMAT.md). Див. [LICENSE-DATA](LICENSE-DATA).
+- `tools/roads/`: MIT, see [LICENSE](LICENSE).
