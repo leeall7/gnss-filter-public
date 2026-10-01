@@ -23,6 +23,39 @@ CLASSES = {
 SKIP_SERVICE = {'parking_aisle', 'drive-through', 'drive_through', 'emergency_access'}
 CELL = 0.01           # сітка «що поруч», градуси
 
+# Обмеження швидкості (як Android nav 11.4.0): число або зона UA:*; невідоме — 0 (знак не показуємо)
+UA_ZONE = {'UA:urban': 50, 'UA:rural': 90, 'UA:motorway': 130, 'UA:trunk': 110, 'UA:living_street': 20}
+# Точкові попередження: 1 — камера, 2 — залізничний переїзд, 3 — лежачий поліцейський
+POI_CAMERA, POI_RAIL, POI_BUMP = 1, 2, 3
+CALMING = {'bump', 'hump', 'table', 'cushion', 'yes', 'dip', 'chicane'}
+
+
+def speed_of(v):
+    if not v: return 0
+    v = v.strip()
+    if v in UA_ZONE: return UA_ZONE[v]
+    if v == 'walk': return 5
+    num = ''.join(ch for ch in v.split(';')[0] if ch.isdigit())
+    if not num: return 0
+    k = int(num)
+    if 'mph' in v: k = round(k * 1.609)
+    return k if 5 <= k <= 150 else 0
+
+
+def limits(tags):
+    """(у напрямку точок, проти) км/год; maxspeed:forward/backward мають перевагу."""
+    base = speed_of(tags.get('maxspeed')) or UA_ZONE.get(tags.get('maxspeed:type', ''), 0) or UA_ZONE.get(tags.get('source:maxspeed', ''), 0)
+    f = speed_of(tags.get('maxspeed:forward')) or base
+    b = speed_of(tags.get('maxspeed:backward')) or base
+    return f, b
+
+
+def road_poi_kind(tags):
+    if tags.get('highway') == 'speed_camera' or tags.get('enforcement') == 'maxspeed': return POI_CAMERA
+    if tags.get('railway') in ('level_crossing', 'crossing'): return POI_RAIL
+    if tags.get('traffic_calming') in CALMING: return POI_BUMP
+    return 0
+
 
 def wanted(tags):
     hw = tags.get('highway')
@@ -91,17 +124,29 @@ def build_roads(pbf, out):
       PRAGMA journal_mode=OFF; PRAGMA synchronous=OFF;
       CREATE TABLE meta(k TEXT PRIMARY KEY, v TEXT);
       CREATE TABLE seg(id INTEGER PRIMARY KEY, way INTEGER, a INTEGER, b INTEGER, cls INTEGER, oneway INTEGER,
-                       pts BLOB, minlat REAL, maxlat REAL, minlon REAL, maxlon REAL);
+                       pts BLOB, minlat REAL, maxlat REAL, minlon REAL, maxlon REAL, maxfwd INTEGER, maxbwd INTEGER);
       CREATE TABLE cell(cell INTEGER, seg INTEGER);
       CREATE TABLE node(node INTEGER, seg INTEGER);
+      CREATE TABLE poi(id INTEGER PRIMARY KEY, kind INTEGER, lat REAL, lon REAL, maxspeed INTEGER);
+      CREATE TABLE poicell(cell INTEGER, poi INTEGER);
     """)
+    stat_poi = [0, 0, 0, 0]
     stat = {'seg': 0, 'bbox': [90, 180, -90, -180]}
 
     class P2(osmium.SimpleHandler):
+        def node(self, n):
+            k = road_poi_kind(n.tags)
+            if not k or not n.location.valid(): return
+            la, lo = n.location.lat, n.location.lon
+            cur = db.execute('INSERT INTO poi(kind,lat,lon,maxspeed) VALUES(?,?,?,?)', (k, la, lo, speed_of(n.tags.get('maxspeed'))))
+            db.execute('INSERT INTO poicell VALUES(?,?)', (cell_of(la, lo), cur.lastrowid))
+            stat_poi[k] += 1
+
         def way(self, w):
             cls = wanted(w.tags)
             if cls is None: return
             ow = oneway_of(w.tags)
+            self.lim = limits(w.tags)
             pts, refs = [], []
             for n in w.nodes:
                 if not n.location.valid():
@@ -119,8 +164,8 @@ def build_roads(pbf, out):
         def seg(self, wid, cls, ow, pts, na, nb):
             lats = [p[0] / 1e6 for p in pts]; lons = [p[1] / 1e6 for p in pts]
             blob = b''.join(struct.pack('<ii', p[0], p[1]) for p in pts)
-            cur = db.execute('INSERT INTO seg(way,a,b,cls,oneway,pts,minlat,maxlat,minlon,maxlon) VALUES(?,?,?,?,?,?,?,?,?,?)',
-                             (wid, na, nb, cls, ow, blob, min(lats), max(lats), min(lons), max(lons)))
+            cur = db.execute('INSERT INTO seg(way,a,b,cls,oneway,pts,minlat,maxlat,minlon,maxlon,maxfwd,maxbwd) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
+                             (wid, na, nb, cls, ow, blob, min(lats), max(lats), min(lons), max(lons), self.lim[0], self.lim[1]))
             sid = cur.lastrowid
             cells = {cell_of(la, lo) for la, lo in zip(lats, lons)}
             # довгі прямі відрізки — ще й клітинки між точками (кожні ~500 м)
@@ -136,12 +181,13 @@ def build_roads(pbf, out):
             bb[0] = min(bb[0], min(lats)); bb[1] = min(bb[1], min(lons)); bb[2] = max(bb[2], max(lats)); bb[3] = max(bb[3], max(lons))
 
     P2().apply_file(pbf, locations=True)
-    db.executescript('CREATE INDEX cell_i ON cell(cell); CREATE INDEX node_i ON node(node);')
+    db.executescript('CREATE INDEX cell_i ON cell(cell); CREATE INDEX node_i ON node(node); CREATE INDEX poicell_i ON poicell(cell);')
     bb = stat['bbox']
-    db.executemany('INSERT INTO meta VALUES(?,?)', [('format', 'gnss-roads-1'), ('cell_deg', str(CELL)),
+    db.executemany('INSERT INTO meta VALUES(?,?)', [('format', 'gnss-roads-2'), ('cell_deg', str(CELL)),
+                   ('poi', f'камер {stat_poi[1]}, переїздів {stat_poi[2]}, лежачих {stat_poi[3]}'),
                    ('bbox', ','.join(f'{x:.5f}' for x in bb)), ('segments', str(stat['seg']))])
     db.commit(); db.execute('VACUUM'); db.close()
-    print(f'дороги: {stat["seg"]} відрізків, перехресть {len(junction)} → {out} ({os.path.getsize(out)//1024} КБ)')
+    print(f'дороги: {stat["seg"]} відрізків, перехресть {len(junction)}, камер {stat_poi[1]}, переїздів {stat_poi[2]}, лежачих {stat_poi[3]} → {out} ({os.path.getsize(out)//1024} КБ)')
 
 
 # ------------------------------------------------------------------ пошук
@@ -174,10 +220,11 @@ def build_search(pbf, out):
                 pop = t.get('population', '').replace(' ', '')
                 bonus = int(min(20, 4 * math.log10(int(pop)))) if pop.isdigit() and int(pop) > 0 else 0
                 places.append((nm, t.get('place'), la, lo, PLACE_RANK[t.get('place')] + bonus))
+            # заклад з власною адресою — і заклад, і адреса
+            if nm and any(k in t for k in POI_KEYS):
+                pois.append((nm, poi_kind(t), la, lo, own_addr(t)))
             if t.get('addr:housenumber') and t.get('addr:street'):
                 addrs.append((t.get('addr:street'), t.get('addr:housenumber'), t.get('addr:city'), la, lo))
-            elif nm and any(k in t for k in POI_KEYS):
-                pois.append((nm, poi_kind(t), la, lo))
 
         def way(self, w):
             t = w.tags
@@ -189,12 +236,12 @@ def build_search(pbf, out):
                     key = nm
                     streets.setdefault(key, []).append((c[0], c[1], n))
                 return
-            if t.get('addr:housenumber') and t.get('addr:street'):
+            is_poi = nm and any(k in t for k in POI_KEYS)
+            has_addr = t.get('addr:housenumber') and t.get('addr:street')
+            if is_poi or has_addr:
                 c = centroid(w)
-                if c: addrs.append((t.get('addr:street'), t.get('addr:housenumber'), t.get('addr:city'), c[0], c[1]))
-            elif nm and any(k in t for k in POI_KEYS):
-                c = centroid(w)
-                if c: pois.append((nm, poi_kind(t), c[0], c[1]))
+                if c and is_poi: pois.append((nm, poi_kind(t), c[0], c[1], own_addr(t)))
+                if c and has_addr: addrs.append((t.get('addr:street'), t.get('addr:housenumber'), t.get('addr:city'), c[0], c[1]))
 
     H().apply_file(pbf, locations=True)
 
@@ -236,20 +283,44 @@ def build_search(pbf, out):
             rows.append((KIND_STREET, nm, pl, la, lo, 30))
     for st, hn, city, la, lo in addrs:
         rows.append((KIND_ADDR, f'{st}, {hn}', city or nearest_place(la, lo), la, lo, 10))
-    for nm, kind, la, lo in pois:
+    # адреса закладу: власні теги, інакше — найближча адреса в межах 60 м (сітка ~100 м)
+    agrid = defaultdict(list)
+    for st, hn, city, la, lo in addrs: agrid[(int(la * 1000), int(lo * 1000))].append((la, lo, f'{st}, {hn}'))
+
+    def nearest_addr(la, lo):
+        best, bd = '', 60.0
+        gi, gj = int(la * 1000), int(lo * 1000)
+        k = math.cos(math.radians(la))
+        for di in (-1, 0, 1):
+            for dj in (-1, 0, 1):
+                for a_la, a_lo, txt in agrid.get((gi + di, gj + dj), ()):
+                    d = math.hypot((a_la - la) * 111320, (a_lo - lo) * 111320 * k)
+                    if d < bd: bd, best = d, txt
+        return best
+
+    with_addr = 0
+    for nm, kind, la, lo, adr in pois:
         pl = nearest_place(la, lo)
-        rows.append((KIND_POI, nm, (kind + (' · ' + pl if pl else '')), la, lo, 20))
+        adr = adr or nearest_addr(la, lo)
+        if adr: with_addr += 1
+        rows.append((KIND_POI, nm, ' · '.join(x for x in (kind, adr, pl) if x), la, lo, 20))
     db.executemany('INSERT INTO item(kind,name,extra,lat,lon,rank) VALUES(?,?,?,?,?,?)', rows)
     db.execute('INSERT INTO fts(docid,name,extra) SELECT id,name,extra FROM item')
+    db.execute('CREATE INDEX item_ll ON item(lat, lon)')
     db.executemany('INSERT INTO meta VALUES(?,?)', [('format', 'gnss-search-1'), ('items', str(len(rows)))])
     db.commit(); db.execute("INSERT INTO fts(fts) VALUES('optimize')"); db.commit(); db.execute('VACUUM'); db.close()
-    print(f'пошук: пунктів {len(places)}, вулиць {len(streets)}, адрес {len(addrs)}, об\'єктів {len(pois)} → {out} ({os.path.getsize(out)//1024} КБ)')
+    print(f'пошук: пунктів {len(places)}, вулиць {len(streets)}, адрес {len(addrs)}, об\'єктів {len(pois)} (з адресою {with_addr}) → {out} ({os.path.getsize(out)//1024} КБ)')
 
 
 POI_UK = {'fuel': 'АЗС', 'hospital': 'лікарня', 'pharmacy': 'аптека', 'police': 'поліція', 'cafe': 'кафе',
           'restaurant': 'ресторан', 'school': 'школа', 'bank': 'банк', 'atm': 'банкомат', 'parking': 'стоянка',
           'supermarket': 'супермаркет', 'hotel': 'готель', 'station': 'вокзал', 'townhall': 'рада',
           'post_office': 'пошта', 'car_repair': 'СТО', 'marketplace': 'ринок', 'clinic': 'клініка'}
+
+
+def own_addr(t):
+    st, hn = t.get('addr:street'), t.get('addr:housenumber')
+    return f'{st}, {hn}' if st and hn else ''
 
 
 def poi_kind(t):
