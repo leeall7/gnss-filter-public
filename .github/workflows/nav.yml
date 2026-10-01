@@ -9,15 +9,20 @@ permissions:
   contents: write
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04      # закріплено: ubuntu-latest з 19.10.2026 → Ubuntu 26
     timeout-minutes: 340
     env:
       GH_TOKEN: ${{ github.token }}
-      WORK: work
+      WORK: /mnt/work
       # Той самий Valhalla, що всередині valhalla-mobile 0.6.3 (формат плиток сумісний); немає тегу — latest.
       VALHALLA_IMAGE: ghcr.io/valhalla/valhalla:3.6.3
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+      - name: Пам'ять і диск
+        run: |
+          sudo mkdir -p /mnt/work && sudo chown "$(id -u):$(id -g)" /mnt/work
+          sudo fallocate -l 8G /mnt/swapfile && sudo chmod 600 /mnt/swapfile && sudo mkswap /mnt/swapfile && sudo swapon /mnt/swapfile
+          free -h; df -h / /mnt
       - name: Місце на диску
         run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL; df -h .
       - name: Інструменти
@@ -43,17 +48,18 @@ jobs:
           json.dump({'directory': '.', 'extracts': ex}, open(f'{w}/extracts.json', 'w'))
           PY
           cd "$WORK" && osmium extract -c extracts.json -s complete_ways ukraine.osm.pbf --overwrite && ls -la reg-*.osm.pbf | head
+          free -h; df -h /mnt
       - name: Valhalla — Україна
         run: |
-          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD/$WORK:/data" "$VALHALLA_IMAGE" bash -c '
+          docker run --rm --user "$(id -u):$(id -g)" -v "$WORK:/data" "$VALHALLA_IMAGE" bash -c '
             set -e
-            valhalla_build_config --mjolnir-tile-dir /data/vt --mjolnir-tile-extract /data/routes-UA.tar \
+            valhalla_build_config --mjolnir-concurrency 2 --mjolnir-tile-dir /data/vt --mjolnir-tile-extract /data/routes-UA.tar \
               --mjolnir-admin /data/admins.sqlite --mjolnir-timezone /data/tz.sqlite > /data/valhalla.json
             valhalla_build_timezones > /data/tz.sqlite || echo "часові пояси недоступні — без них"
             valhalla_build_admins -c /data/valhalla.json /data/ukraine.osm.pbf
             valhalla_build_tiles -c /data/valhalla.json /data/ukraine.osm.pbf
             valhalla_build_extract -c /data/valhalla.json -v'
-          ls -la "$WORK/routes-UA.tar"
+          ls -la "$WORK/routes-UA.tar"; free -h; df -h /mnt
       - name: Valhalla — області (плитки з українських, без перебудови)
         run: |
           python3 - <<'PY'
@@ -66,7 +72,7 @@ jobs:
                               '--bbox', ','.join(map(str, r['bbox']))], check=True)
               cfg['mjolnir']['tile_dir'] = f'/data/vt-{rid}'; cfg['mjolnir']['tile_extract'] = f'/data/routes-{rid}.tar'
               json.dump(cfg, open(f'{w}/valhalla-{rid}.json', 'w'))
-              subprocess.run(['docker', 'run', '--rm', '--user', f'{os.getuid()}:{os.getgid()}', '-v', f'{os.getcwd()}/{w}:/data', img,
+              subprocess.run(['docker', 'run', '--rm', '--user', f'{os.getuid()}:{os.getgid()}', '-v', f'{w}:/data', img,
                               'valhalla_build_extract', '-c', f'/data/valhalla-{rid}.json', '-v'], check=True)
               subprocess.run(['rm', '-rf', f'{w}/vt-{rid}'], check=True)
           PY
