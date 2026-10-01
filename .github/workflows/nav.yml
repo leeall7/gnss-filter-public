@@ -38,17 +38,26 @@ jobs:
           osmium tags-filter "$WORK/ukraine.osm.pbf" r/boundary=administrative -o "$WORK/adm.osm.pbf" --overwrite
           osmium export "$WORK/adm.osm.pbf" -f geojsonseq --geometry-types=polygon -o "$WORK/adm.geojsonseq" --overwrite
           python3 tools/maps/build_maps.py regions --work "$WORK" --adm "$WORK/adm.geojsonseq"
-      - name: Області — один прохід osmium
+      - name: Області — osmium пачками по 4
+        # complete_ways тримає на кожну область бітову карту всіх id вузлів (~1,6 ГБ): 27 разом — ~40 ГБ,
+        # машина падає («runner has received a shutdown signal»). Пачками по 4 — ~7 ГБ на прохід.
         run: |
           python3 - <<'PY'
           import json, os
           w = os.environ['WORK']; meta = json.load(open(f'{w}/regions.json', encoding='utf-8'))
-          ex = [{'output': f'reg-{rid}.osm.pbf', 'polygon': {'file_name': f'regions/{rid}.geojson', 'file_type': 'geojson'}}
-                for rid in meta if rid != 'UA']
-          json.dump({'directory': '.', 'extracts': ex}, open(f'{w}/extracts.json', 'w'))
+          ids = [rid for rid in meta if rid != 'UA']
+          for k in range(0, len(ids), 4):
+              ex = [{'output': f'reg-{rid}.osm.pbf', 'polygon': {'file_name': f'regions/{rid}.geojson', 'file_type': 'geojson'}}
+                    for rid in ids[k:k + 4]]
+              json.dump({'directory': '.', 'extracts': ex}, open(f'{w}/extracts-{k // 4:02d}.json', 'w'))
+          print('пачок:', (len(ids) + 3) // 4)
           PY
-          cd "$WORK" && osmium extract -c extracts.json -s complete_ways ukraine.osm.pbf --overwrite && ls -la reg-*.osm.pbf | head
-          free -h; df -h /mnt
+          cd "$WORK"
+          for c in extracts-*.json; do
+            echo "== $c"; osmium extract -c "$c" -s complete_ways ukraine.osm.pbf --overwrite
+            free -h | head -2
+          done
+          ls -la reg-*.osm.pbf | head -30; df -h /mnt
       - name: Valhalla — Україна
         run: |
           docker run --rm --user "$(id -u):$(id -g)" -v "$WORK:/data" "$VALHALLA_IMAGE" bash -c '
