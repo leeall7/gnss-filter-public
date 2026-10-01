@@ -1,2 +1,0 @@
-{ "name": "gnss-nav-map-style", "private": true,
-  "dependencies": { "@protomaps/basemaps": "5.7.2", "@maplibre/maplibre-gl-style-spec": "26.4.4" } }
