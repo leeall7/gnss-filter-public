@@ -1,0 +1,96 @@
+# Модулі «Маршрути» (Valhalla + граф доріг для прив'язки) і «Пошук» для GNSS Nav (iOS):
+# Україна + кожна область. Релізи routes-latest і search-latest — щомісяця.
+name: nav
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 5 2 * *"
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    env:
+      GH_TOKEN: ${{ github.token }}
+      WORK: work
+      # Той самий Valhalla, що всередині valhalla-mobile 0.6.3 (формат плиток сумісний); немає тегу — latest.
+      VALHALLA_IMAGE: ghcr.io/valhalla/valhalla:3.6.3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Місце на диску
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL; df -h .
+      - name: Інструменти
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q osmium-tool
+          pip install osmium numpy --break-system-packages -q || pip install osmium numpy -q
+          docker pull "$VALHALLA_IMAGE" || { echo "немає $VALHALLA_IMAGE — беру latest"; echo "VALHALLA_IMAGE=ghcr.io/valhalla/valhalla:latest" >> "$GITHUB_ENV"; docker pull ghcr.io/valhalla/valhalla:latest; }
+      - name: OSM і межі областей
+        run: |
+          mkdir -p "$WORK"
+          curl -fsSL -o "$WORK/ukraine.osm.pbf" https://download.geofabrik.de/europe/ukraine-latest.osm.pbf
+          osmium fileinfo -e -g header.option.osmosis_replication_timestamp "$WORK/ukraine.osm.pbf" > "$WORK/osm_date.txt" || true
+          osmium tags-filter "$WORK/ukraine.osm.pbf" r/boundary=administrative -o "$WORK/adm.osm.pbf" --overwrite
+          osmium export "$WORK/adm.osm.pbf" -f geojsonseq --geometry-types=polygon -o "$WORK/adm.geojsonseq" --overwrite
+          python3 tools/maps/build_maps.py regions --work "$WORK" --adm "$WORK/adm.geojsonseq"
+      - name: Області — один прохід osmium
+        run: |
+          python3 - <<'PY'
+          import json, os
+          w = os.environ['WORK']; meta = json.load(open(f'{w}/regions.json', encoding='utf-8'))
+          ex = [{'output': f'reg-{rid}.osm.pbf', 'polygon': {'file_name': f'regions/{rid}.geojson', 'file_type': 'geojson'}}
+                for rid in meta if rid != 'UA']
+          json.dump({'directory': '.', 'extracts': ex}, open(f'{w}/extracts.json', 'w'))
+          PY
+          cd "$WORK" && osmium extract -c extracts.json -s complete_ways ukraine.osm.pbf --overwrite && ls -la reg-*.osm.pbf | head
+      - name: Valhalla — Україна
+        run: |
+          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD/$WORK:/data" "$VALHALLA_IMAGE" bash -c '
+            set -e
+            valhalla_build_config --mjolnir-tile-dir /data/vt --mjolnir-tile-extract /data/routes-UA.tar \
+              --mjolnir-admin /data/admins.sqlite --mjolnir-timezone /data/tz.sqlite > /data/valhalla.json
+            valhalla_build_timezones > /data/tz.sqlite || echo "часові пояси недоступні — без них"
+            valhalla_build_admins -c /data/valhalla.json /data/ukraine.osm.pbf
+            valhalla_build_tiles -c /data/valhalla.json /data/ukraine.osm.pbf
+            valhalla_build_extract -c /data/valhalla.json -v'
+          ls -la "$WORK/routes-UA.tar"
+      - name: Valhalla — області (плитки з українських, без перебудови)
+        run: |
+          python3 - <<'PY'
+          import json, os, subprocess
+          w = os.environ['WORK']; img = os.environ['VALHALLA_IMAGE']
+          meta = json.load(open(f'{w}/regions.json', encoding='utf-8')); cfg = json.load(open(f'{w}/valhalla.json'))
+          for rid, r in meta.items():
+              if rid == 'UA': continue
+              subprocess.run(['python3', 'tools/nav/build_nav.py', 'valtiles', '--src', f'{w}/vt', '--dst', f'{w}/vt-{rid}',
+                              '--bbox', ','.join(map(str, r['bbox']))], check=True)
+              cfg['mjolnir']['tile_dir'] = f'/data/vt-{rid}'; cfg['mjolnir']['tile_extract'] = f'/data/routes-{rid}.tar'
+              json.dump(cfg, open(f'{w}/valhalla-{rid}.json', 'w'))
+              subprocess.run(['docker', 'run', '--rm', '--user', f'{os.getuid()}:{os.getgid()}', '-v', f'{os.getcwd()}/{w}:/data', img,
+                              'valhalla_build_extract', '-c', f'/data/valhalla-{rid}.json', '-v'], check=True)
+              subprocess.run(['rm', '-rf', f'{w}/vt-{rid}'], check=True)
+          PY
+          rm -rf "$WORK/vt"
+      - name: Граф доріг і пошук
+        run: |
+          python3 tools/nav/build_nav.py roads --pbf "$WORK/ukraine.osm.pbf" --out "$WORK/roads-UA.sqlite"
+          python3 tools/nav/build_nav.py search --pbf "$WORK/ukraine.osm.pbf" --out "$WORK/search-UA.sqlite"
+          for f in "$WORK"/reg-*.osm.pbf; do
+            id=$(basename "$f" .osm.pbf); id=${id#reg-}
+            python3 tools/nav/build_nav.py roads --pbf "$f" --out "$WORK/roads-$id.sqlite"
+            python3 tools/nav/build_nav.py search --pbf "$f" --out "$WORK/search-$id.sqlite"
+          done
+      - name: Маніфести
+        run: |
+          D="$(cat $WORK/osm_date.txt 2>/dev/null)"
+          python3 tools/nav/build_nav.py manifest --work "$WORK" --module routes --pattern 'routes-{id}.tar,roads-{id}.sqlite' --regions "$WORK/regions.json" --osm-date "$D"
+          python3 tools/nav/build_nav.py manifest --work "$WORK" --module search --pattern 'search-{id}.sqlite' --regions "$WORK/regions.json" --osm-date "$D"
+      - name: Релізи routes-latest і search-latest
+        run: |
+          for t in routes search; do
+            gh release view $t-latest > /dev/null 2>&1 || gh release create $t-latest --title "Офлайн: $t (щомісяця)" \
+              --notes "Україна та області. Дані © OpenStreetMap contributors, ODbL. Використовує застосунок GNSS Nav для iOS."
+            mkdir -p "up-$t" && cp "$WORK/manifest-$t.json" "up-$t/manifest.json"
+          done
+          gh release upload routes-latest "$WORK"/routes-*.tar "$WORK"/roads-*.sqlite up-routes/manifest.json --clobber
+          gh release upload search-latest "$WORK"/search-*.sqlite up-search/manifest.json --clobber

@@ -1,0 +1,52 @@
+# Офлайн-мапи GNSS Nav (iOS): Україна + кожна область. Реліз з тегом maps-latest оновлюється щомісяця.
+name: maps
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 2 * *"      # 2-го числа щомісяця
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      GH_TOKEN: ${{ github.token }}
+      WORK: work
+    steps:
+      - uses: actions/checkout@v4
+      - name: Інструменти
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q osmium-tool
+          gh release download --repo protomaps/go-pmtiles --pattern '*Linux_x86_64.tar.gz' --dir /tmp/pm
+          tar -xzf /tmp/pm/*.tar.gz -C /tmp/pm && sudo install /tmp/pm/pmtiles /usr/local/bin/pmtiles
+          pmtiles version || true
+          git clone --depth 1 https://github.com/protomaps/basemaps-assets.git basemaps-assets
+      - name: Межі областей (OSM, Geofabrik)
+        run: |
+          mkdir -p "$WORK"
+          curl -fsSL -o "$WORK/ukraine.osm.pbf" https://download.geofabrik.de/europe/ukraine-latest.osm.pbf
+          osmium fileinfo -e -g header.option.osmosis_replication_timestamp "$WORK/ukraine.osm.pbf" > "$WORK/osm_date.txt" || true
+          osmium tags-filter "$WORK/ukraine.osm.pbf" r/boundary=administrative -o "$WORK/adm.osm.pbf" --overwrite
+          osmium export "$WORK/adm.osm.pbf" -f geojsonseq --geometry-types=polygon -o "$WORK/adm.geojsonseq" --overwrite
+          python3 tools/maps/build_maps.py regions --work "$WORK" --adm "$WORK/adm.geojsonseq"
+          rm -f "$WORK/ukraine.osm.pbf" "$WORK/adm.osm.pbf"
+      - name: Остання планетарна збірка Protomaps
+        run: |
+          for i in $(seq 0 14); do
+            d=$(date -u -d "-$i day" +%Y%m%d)
+            if curl -fsI "https://build.protomaps.com/$d.pmtiles" > /dev/null; then echo "PLANET=https://build.protomaps.com/$d.pmtiles" >> "$GITHUB_ENV"; break; fi
+          done
+      - name: Плитки — Україна й області
+        run: |
+          test -n "$PLANET" || { echo "немає планетарної збірки"; exit 1; }
+          python3 tools/maps/build_maps.py extract --work "$WORK" --planet "$PLANET"
+      - name: Шрифти й значки
+        run: python3 tools/maps/build_maps.py assets --work "$WORK" --assets-repo basemaps-assets
+      - name: Маніфест
+        run: python3 tools/maps/build_maps.py manifest --work "$WORK" --planet "$PLANET" --osm-date "$(cat $WORK/osm_date.txt 2>/dev/null)"
+      - name: Реліз maps-latest
+        run: |
+          gh release view maps-latest > /dev/null 2>&1 || gh release create maps-latest --title "Офлайн-мапи (щомісяця)" \
+            --notes "Україна та області, PMTiles (Protomaps v4). Дані © OpenStreetMap contributors, ODbL. Використовує застосунок GNSS Nav для iOS."
+          gh release upload maps-latest "$WORK"/map-*.pmtiles "$WORK/map-assets.tar" "$WORK/manifest.json" --clobber
