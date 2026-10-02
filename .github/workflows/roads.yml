@@ -88,7 +88,7 @@ jobs:
         run: echo "d=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
 
       - name: Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: road-tiles
           path: |
@@ -97,15 +97,38 @@ jobs:
           retention-days: 30
 
       - name: Release
-        # рамка (bbox) — як prerelease: «latest» його не бере, і застосунок далі тягне повну карту
+        # рамка (bbox) — як prerelease: «latest» його не бере, і застосунок далі тягне повну карту.
+        # make_latest — явно: у репозиторії є й інші щомісячні релізи (мапи, маршрути для iOS), і без
+        # цього GitHub робив «Latest» один із них — releases/latest/download/ua-roads.bin давав 404.
         uses: softprops/action-gh-release@v2
         with:
+          make_latest: ${{ (github.event.inputs.bbox == '' || github.event.inputs.bbox == null) && 'true' || 'false' }}
           prerelease: ${{ github.event.inputs.bbox != '' && github.event.inputs.bbox != null }}
           tag_name: roads-${{ steps.d.outputs.d }}-${{ github.run_number }}
           name: Дороги OSM для прив'язки, ${{ steps.d.outputs.d }}
           body: |
-            Дані © OpenStreetMap contributors, ODbL 1.0. Джерело — Geofabrik ukraine-latest.
+            Дані © OpenStreetMap contributors, ODbL 1.0 (див. LICENSE-DATA). Джерело — Geofabrik ukraine-latest.
             Формат — tools/roads/FORMAT.md. Зведення — у *.txt.
           files: |
             *.bin
             *.txt
+
+      - name: Постійна адреса roads-latest
+        # Застосунок (11.4.2+) качає з releases/download/roads-latest/ua-roads.bin — ця адреса не
+        # залежить від того, який реліз GitHub вважає «Latest». Лише повна Україна (без рамки).
+        if: ${{ github.event.inputs.bbox == '' || github.event.inputs.bbox == null }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: roads-latest
+          name: Дороги OSM для прив'язки — поточні (roads-latest)
+          make_latest: 'false'
+          overwrite_files: true
+          body: |
+            Завжди найсвіжіша схема доріг (оновлюється щомісяця). Дані © OpenStreetMap contributors,
+            ODbL 1.0 (див. LICENSE-DATA). Джерело — Geofabrik ukraine-latest. Формат — tools/roads/FORMAT.md.
+          files: |
+            ua-roads.bin
+            ua-roads.txt
+            kyiv-roads.bin
+            kyiv-roads.txt
+            
