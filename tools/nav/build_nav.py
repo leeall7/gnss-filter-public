@@ -52,7 +52,9 @@ def limits(tags):
 
 def road_poi_kind(tags):
     if tags.get('highway') == 'speed_camera' or tags.get('enforcement') == 'maxspeed': return POI_CAMERA
-    if tags.get('railway') in ('level_crossing', 'crossing'): return POI_RAIL
+    # лише переїзд «дорога × залізниця»; railway=crossing — пішохідний перехід через колію (у Києві таких сотні
+    # біля трамвайних колій), трамвайні переїзди — railway=tram_level_crossing: не попереджаємо
+    if tags.get('railway') == 'level_crossing': return POI_RAIL
     if tags.get('traffic_calming') in CALMING: return POI_BUMP
     return 0
 
@@ -196,8 +198,23 @@ POI_KEYS = ('amenity', 'shop', 'tourism', 'leisure', 'office', 'healthcare', 'ra
 KIND_PLACE, KIND_VILLAGE, KIND_STREET, KIND_ADDR, KIND_POI = 0, 1, 2, 3, 4
 
 
+LANG = 'uk'            # мова відображення пошуку: uk (Україна), he (Ізраїль); --lang
+OTHER_NAMES = ('name', 'name:en', 'name:uk', 'name:he', 'name:ru', 'name:ar')
+NAME_INFO = {}         # назва для показу → (англійська, інші назви для пошуку)
+
+
 def uk_name(tags):
-    return tags.get('name:uk') or tags.get('name')
+    """Назва для показу мовою регіону; англійська й інші назви — у NAME_INFO (шукаються, en — для англ. інтерфейсу)."""
+    nm = tags.get('name:' + LANG) or tags.get('name')
+    if nm and nm not in NAME_INFO:
+        en = tags.get('name:en') or ''
+        alt = ' '.join(dict.fromkeys(v for v in (tags.get(k) for k in OTHER_NAMES) if v and v != nm))
+        if en or alt: NAME_INFO[nm] = (en, alt)
+    return nm
+
+
+def info(nm):
+    return NAME_INFO.get(nm, ('', ''))
 
 
 def build_search(pbf, out):
@@ -267,8 +284,9 @@ def build_search(pbf, out):
     db.executescript("""
       PRAGMA journal_mode=OFF; PRAGMA synchronous=OFF;
       CREATE TABLE meta(k TEXT PRIMARY KEY, v TEXT);
-      CREATE TABLE item(id INTEGER PRIMARY KEY, kind INTEGER, name TEXT, extra TEXT, lat REAL, lon REAL, rank INTEGER);
-      CREATE VIRTUAL TABLE fts USING fts4(name, extra, tokenize=unicode61);
+      CREATE TABLE item(id INTEGER PRIMARY KEY, kind INTEGER, name TEXT, extra TEXT, lat REAL, lon REAL, rank INTEGER,
+                        name_en TEXT, alt TEXT);
+      CREATE VIRTUAL TABLE fts USING fts4(name, extra, alt, tokenize=unicode61);
     """)
     rows = []
     for nm, pl, la, lo, rk in places:
@@ -304,8 +322,16 @@ def build_search(pbf, out):
         adr = adr or nearest_addr(la, lo)
         if adr: with_addr += 1
         rows.append((KIND_POI, nm, ' · '.join(x for x in (kind, adr, pl) if x), la, lo, 20))
-    db.executemany('INSERT INTO item(kind,name,extra,lat,lon,rank) VALUES(?,?,?,?,?,?)', rows)
-    db.execute('INSERT INTO fts(docid,name,extra) SELECT id,name,extra FROM item')
+    def enrich(r):
+        kind, nm = r[0], r[1]
+        if kind == KIND_ADDR:                          # «вулиця, номер» — англійська назва вулиці, якщо є
+            st, _, hn = nm.rpartition(', ')
+            en, alt = info(st)
+            return r + ((en + ', ' + hn) if en else '', (alt + ' ' + hn) if alt else '')
+        return r + info(nm)
+    rows = [enrich(r) for r in rows]
+    db.executemany('INSERT INTO item(kind,name,extra,lat,lon,rank,name_en,alt) VALUES(?,?,?,?,?,?,?,?)', rows)
+    db.execute('INSERT INTO fts(docid,name,extra,alt) SELECT id,name,extra,alt FROM item')
     db.execute('CREATE INDEX item_ll ON item(lat, lon)')
     db.executemany('INSERT INTO meta VALUES(?,?)', [('format', 'gnss-search-1'), ('items', str(len(rows)))])
     db.commit(); db.execute("INSERT INTO fts(fts) VALUES('optimize')"); db.commit(); db.execute('VACUUM'); db.close()
@@ -323,10 +349,21 @@ def own_addr(t):
     return f'{st}, {hn}' if st and hn else ''
 
 
+POI_WORDS = {
+    'uk': POI_UK,
+    'he': {'fuel': 'תחנת דלק', 'hospital': 'בית חולים', 'pharmacy': 'בית מרקחת', 'police': 'משטרה', 'cafe': 'בית קפה',
+           'restaurant': 'מסעדה', 'school': 'בית ספר', 'bank': 'בנק', 'atm': 'כספומט', 'parking': 'חניה',
+           'supermarket': 'סופרמרקט', 'hotel': 'מלון', 'station': 'תחנה', 'townhall': 'עירייה', 'post_office': 'דואר',
+           'car_repair': 'מוסך', 'marketplace': 'שוק', 'clinic': 'מרפאה', 'fast_food': 'מזון מהיר'},
+    'en': {'fuel': 'fuel', 'atm': 'ATM', 'townhall': 'town hall', 'post_office': 'post office', 'car_repair': 'car repair'},
+}
+
+
 def poi_kind(t):
+    words = POI_WORDS.get(LANG, {})
     for k in POI_KEYS:
         v = t.get(k)
-        if v: return POI_UK.get(v, v.replace('_', ' '))
+        if v: return words.get(v, v.replace('_', ' '))
     return ''
 
 
@@ -367,10 +404,11 @@ def sha256(path):
     return h.hexdigest()
 
 
-def manifest(work, module, pattern, regions_json, osm_date):
+def manifest(work, module, pattern, regions_json, osm_date, merge=None):
+    """merge — старий маніфест: регіони з інших id (Ізраїль для України й навпаки) лишаються."""
     meta = json.load(open(regions_json, encoding='utf-8'))
     regs = []
-    for rid in ['UA'] + sorted(k for k in meta if k != 'UA'):
+    for rid in (['UA'] if 'UA' in meta else []) + sorted(k for k in meta if k != 'UA'):
         files = []
         for pat in pattern.split(','):
             fn = pat.replace('{id}', rid)
@@ -378,6 +416,12 @@ def manifest(work, module, pattern, regions_json, osm_date):
             if not os.path.isfile(p): sys.exit('немає ' + p)
             files.append({'file': fn, 'size': os.path.getsize(p), 'sha256': sha256(p)})
         regs.append({'id': rid, 'name': meta[rid]['name'], 'bbox': meta[rid]['bbox'], 'files': files})
+    if merge and os.path.isfile(merge):
+        try:
+            mine = {r['id'] for r in regs}
+            regs += [r for r in json.load(open(merge, encoding='utf-8')).get('regions', []) if r['id'] not in mine]
+        except Exception as e:
+            print('старий маніфест не прочитано:', e)
     now = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
     m = {'schema': 1, 'module': module, 'generated': now, 'osm_date': osm_date,
          'license': 'ODbL 1.0 — © OpenStreetMap contributors', 'regions': regs}
@@ -393,8 +437,11 @@ if __name__ == '__main__':
     ap.add_argument('--src'); ap.add_argument('--dst'); ap.add_argument('--bbox')
     ap.add_argument('--work', default='work'); ap.add_argument('--module'); ap.add_argument('--pattern')
     ap.add_argument('--regions'); ap.add_argument('--osm-date', default='')
+    ap.add_argument('--lang', default='uk', help='мова відображення пошуку: uk, he, en')
+    ap.add_argument('--merge', help='старий manifest.json — регіони з інших id лишаються')
     a = ap.parse_args()
+    LANG = a.lang
     if a.step == 'roads': build_roads(a.pbf, a.out)
     elif a.step == 'search': build_search(a.pbf, a.out)
     elif a.step == 'valtiles': valtiles(a.src, a.dst, [float(x) for x in a.bbox.split(',')])
-    else: manifest(a.work, a.module, a.pattern, a.regions, a.osm_date)
+    else: manifest(a.work, a.module, a.pattern, a.regions, a.osm_date, a.merge)

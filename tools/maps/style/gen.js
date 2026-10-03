@@ -1,7 +1,7 @@
 const b = require('@protomaps/basemaps');
 const { validateStyleMin } = require('@maplibre/maplibre-gl-style-spec');
 const fs = require('fs');
-console.log('uk у мовах:', b.language_script_pairs.some(p => p.lang === 'uk'));
+console.log('мови:', ['uk', 'en', 'he'].map(l => l + ':' + b.language_script_pairs.some(p => p.lang === l)).join(' '));
 
 // «День»: теплий приглушений фон, дороги білі з чіткою обводкою, магістралі — янтарні.
 const day = { ...b.namedFlavor('light'),
@@ -24,7 +24,7 @@ const night = { ...b.namedFlavor('dark'),
   major: '#4a5566', major_casing_early: '#2b323d', major_casing_late: '#2b323d',
   link: '#4a5566', minor_a: '#39424f', minor_b: '#39424f', minor_service: '#323a46',
 };
-function style(name, flavor) {
+function style(name, flavor, lang) {
   return {
     version: 8,
     name: 'GNSS Nav — ' + name,
@@ -32,11 +32,15 @@ function style(name, flavor) {
     sprite: '{SPRITE}',
     sources: { protomaps: { type: 'vector', url: 'pmtiles://{PMTILES}',
       attribution: '© OpenStreetMap contributors · Protomaps' } },
-    layers: b.layers('protomaps', flavor, { lang: 'uk' }),
+    layers: b.layers('protomaps', flavor, { lang }),
   };
 }
-for (const [file, name, fl] of [['style-day.json', 'День', day], ['style-night.json', 'Ніч', night]]) {
-  const s = style(name, fl);
+// підписи мовою телефона: uk (основна), en, he (Ізраїль) — style-{day|night}-{lang}.json
+const runs = [];
+for (const lang of ['uk', 'en', 'he'])
+  for (const [kind, name, fl] of [['day', 'День', day], ['night', 'Ніч', night]]) runs.push([`style-${kind}-${lang}.json`, name, fl, lang]);
+for (const [file, name, fl, lang] of runs) {
+  const s = style(name, fl, lang);
   // валідатор не знає плейсхолдерів — підставляємо зразкові значення лише для перевірки
   // шрифти — під назвами тек в архіві (без пробілів: шлях до локального файла не залежить від кодування URL)
   let txt = JSON.stringify(s).replace(/Noto Sans Regular/g, 'NotoSans-Regular').replace(/Noto Sans Medium/g, 'NotoSans-Medium')

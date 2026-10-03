@@ -107,23 +107,31 @@ def assets(work, assets_repo):
     print("assets:", os.path.getsize(tar_path) // 1024, "КБ")
 
 
-def manifest(work, osm_date, planet_name):
+def manifest(work, osm_date, planet_name, merge=None):
+    """merge — старий manifest.json: регіони з інших id (Ізраїль для України й навпаки) лишаються."""
     meta = json.load(open(os.path.join(work, "regions.json"), encoding="utf-8"))
     def ref(fn):
         p = os.path.join(work, fn)
         return {"file": fn, "size": os.path.getsize(p), "sha256": sha256(p)}
     regs = []
-    for rid in ["UA"] + sorted(k for k in meta if k != "UA"):
+    for rid in (["UA"] if "UA" in meta else []) + sorted(k for k in meta if k != "UA"):
         r = ref(f"map-{rid}.pmtiles")
         r.update({"id": rid, "name": meta[rid]["name"], "bbox": meta[rid]["bbox"]})
         regs.append(r)
+    if merge and os.path.isfile(merge):
+        try:
+            mine = {r["id"] for r in regs}
+            old = json.load(open(merge, encoding="utf-8"))["modules"]["map"]["regions"]
+            regs += [r for r in old if r["id"] not in mine]
+        except Exception as e:
+            print("старий маніфест не прочитано:", e)
     now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     m = {"schema": 1, "generated": now, "osm_date": osm_date, "source": planet_name,
          "license": "ODbL 1.0 — © OpenStreetMap contributors; Protomaps Basemap",
          "modules": {"map": {"tiles_schema": "protomaps-v4", "assets": ref("map-assets.tar"), "regions": regs}}}
     with open(os.path.join(work, "manifest.json"), "w", encoding="utf-8") as g:
         json.dump(m, g, ensure_ascii=False, indent=1)
-    tot = sum(r["size"] for r in regs) / 1e6
+    tot = sum(r.get("size", 0) for r in regs) / 1e6
     print(f"manifest: {len(regs)} файлів, разом {tot:.0f} МБ")
 
 
@@ -137,9 +145,10 @@ if __name__ == "__main__":
     ap.add_argument("--maxzoom", type=int, default=15)
     ap.add_argument("--assets-repo", default="basemaps-assets")
     ap.add_argument("--osm-date", default="")
+    ap.add_argument("--merge", help="старий manifest.json — регіони з інших id лишаються")
     a = ap.parse_args()
     os.makedirs(a.work, exist_ok=True)
     if a.step == "regions": regions(a.work, a.adm)
     elif a.step == "extract": extract(a.work, a.planet, a.pmtiles, a.maxzoom)
     elif a.step == "assets": assets(a.work, a.assets_repo)
-    else: manifest(a.work, a.osm_date, os.path.basename(a.planet or ""))
+    else: manifest(a.work, a.osm_date, os.path.basename(a.planet or ""), a.merge)
