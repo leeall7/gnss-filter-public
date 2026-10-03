@@ -1,0 +1,55 @@
+# Офлайн-мапа Ізраїлю для GNSS Nav (iOS): та сама планетарна збірка Protomaps, що й для України; у maps-latest,
+# маніфест доповнюється (Україна лишається). Підписи — мовою телефона (стилі в застосунку: uk / en / he).
+name: maps-il
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 7 3 * *"
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      GH_TOKEN: ${{ github.token }}
+      WORK: /mnt/work
+    steps:
+      - uses: actions/checkout@v5
+      - name: Диск
+        run: sudo mkdir -p /mnt/work && sudo chown "$(id -u):$(id -g)" /mnt/work && df -h /mnt
+      - name: Інструменти
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q osmium-tool
+          gh release download --repo protomaps/go-pmtiles --pattern '*Linux_x86_64.tar.gz' --dir /tmp/pm
+          tar -xzf /tmp/pm/*.tar.gz -C /tmp/pm && sudo install /tmp/pm/pmtiles /usr/local/bin/pmtiles
+          git clone --depth 1 https://github.com/protomaps/basemaps-assets.git basemaps-assets
+      - name: Дата OSM
+        run: |
+          curl -fsSL -o "$WORK/il.osm.pbf" https://download.geofabrik.de/asia/israel-and-palestine-latest.osm.pbf
+          osmium fileinfo -e -g header.option.osmosis_replication_timestamp "$WORK/il.osm.pbf" > "$WORK/osm_date.txt" || true
+          rm -f "$WORK/il.osm.pbf"
+      - name: Остання планетарна збірка Protomaps
+        run: |
+          for i in $(seq 0 14); do
+            d=$(date -u -d "-$i day" +%Y%m%d)
+            if curl -fsI "https://build.protomaps.com/$d.pmtiles" > /dev/null; then echo "PLANET=https://build.protomaps.com/$d.pmtiles" >> "$GITHUB_ENV"; break; fi
+          done
+      - name: Плитки — Ізраїль
+        run: |
+          test -n "$PLANET" || { echo "немає планетарної збірки"; exit 1; }
+          pmtiles extract "$PLANET" "$WORK/map-IL.pmtiles" --bbox=34.2,29.4,35.95,33.35 --maxzoom=15
+          ls -la "$WORK/map-IL.pmtiles"
+          python3 -c "import json; json.dump({'IL': {'name': 'ישראל · Israel', 'bbox': [34.2,29.4,35.95,33.35]}}, open('$WORK/regions.json', 'w'), ensure_ascii=False)"
+      - name: Шрифти й значки (той самий архів, з івритом)
+        run: python3 tools/maps/build_maps.py assets --work "$WORK" --assets-repo basemaps-assets
+      - name: Маніфест (доповнити)
+        run: |
+          gh release download maps-latest -p manifest.json -O "$WORK/old-manifest.json" --clobber || true
+          python3 tools/maps/build_maps.py manifest --work "$WORK" --planet "$PLANET" --osm-date "$(cat $WORK/osm_date.txt 2>/dev/null)" \
+            --merge "$WORK/old-manifest.json"
+      - name: Реліз maps-latest
+        run: |
+          gh release view maps-latest > /dev/null 2>&1 || gh release create maps-latest --latest=false --title "Офлайн-мапи (щомісяця)" \
+            --notes "Україна, області, Ізраїль — PMTiles (Protomaps v4). Дані © OpenStreetMap contributors, ODbL."
+          gh release upload maps-latest "$WORK/map-IL.pmtiles" "$WORK/map-assets.tar" "$WORK/manifest.json" --clobber

@@ -1,0 +1,60 @@
+# Дороги Ізраїлю для GNSS Nav (iOS): той самий формат і ті самі скрипти, що й для України (UARDS001 + UAREX001).
+# Кладе il-roads.bin, il-extras.bin у постійний реліз roads-latest і доповнює manifest.json. Android це не зачіпає.
+name: Build road tiles (Israel, iOS)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 4 3 * *"        # 3-го числа щомісяця, після України
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Інструменти
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q osmium-tool
+          pip install osmium numpy --break-system-packages -q || pip install osmium numpy -q
+      - name: "OSM (Geofabrik — Israel and Palestine)"
+        run: |
+          curl -fsSL -o il-latest.osm.pbf https://download.geofabrik.de/asia/israel-and-palestine-latest.osm.pbf
+          osmium tags-filter il-latest.osm.pbf w/highway -o il-roads-src.osm.pbf
+          osmium tags-filter il-latest.osm.pbf w/highway n/highway=speed_camera n/enforcement \
+            n/railway=level_crossing n/traffic_calming -o il-extras-src.osm.pbf
+      - name: Дороги й доповнення
+        run: |
+          python3 tools/roads/build_roads.py il-roads-src.osm.pbf il-roads.bin
+          python3 tools/roads/verify_roads.py il-roads.bin | tee il-roads.txt
+          python3 tools/roads/build_extras.py il-extras-src.osm.pbf il-extras.bin
+          python3 tools/roads/verify_extras.py il-extras.bin | tee il-extras.txt
+      - name: Маніфест (доповнити)
+        run: |
+          python3 - <<'PY'
+          # Маніфест доповнюється, а не перезаписується: Україну оновлює roads.yml, Ізраїль — roads-il.yml.
+          import hashlib, json, os, datetime, subprocess
+          def ref(f):
+              return {'file': f, 'size': os.path.getsize(f), 'sha256': hashlib.sha256(open(f, 'rb').read()).hexdigest()}
+          old = {'regions': []}
+          if subprocess.run(['gh', 'release', 'download', 'roads-latest', '-p', 'manifest.json', '-O', 'manifest-old.json', '--clobber']).returncode == 0:
+              try: old = json.load(open('manifest-old.json', encoding='utf-8'))
+              except Exception: pass
+          mine = {'id': 'IL', 'name': 'ישראל · Israel', 'bbox': [34.2, 29.4, 35.95, 33.35], 'files': [ref('il-roads.bin'), ref('il-extras.bin')]}
+          regs = [r for r in old.get('regions', []) if r['id'] != mine['id']] + [mine]
+          m = {'schema': 1, 'module': 'roads',
+               'generated': datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+               'license': 'ODbL 1.0 — © OpenStreetMap contributors', 'regions': sorted(regs, key=lambda r: r['id'])}
+          json.dump(m, open('manifest.json', 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+          print(json.dumps(m, ensure_ascii=False)[:500])
+          PY
+      - name: Реліз roads-latest (не «Latest»)
+        run: |
+          gh release view roads-latest > /dev/null 2>&1 || gh release create roads-latest --latest=false --title "Дороги (постійна адреса)" \
+            --notes "Дороги для GNSS Filter (Android) і GNSS Nav (iOS). © OpenStreetMap contributors, ODbL."
+          gh release upload roads-latest il-roads.bin il-extras.bin il-roads.txt il-extras.txt manifest.json --clobber

@@ -98,12 +98,15 @@ jobs:
       - name: Маніфести
         run: |
           D="$(cat $WORK/osm_date.txt 2>/dev/null)"
-          python3 tools/nav/build_nav.py manifest --work "$WORK" --module routes --pattern 'routes-{id}.tar,roads-{id}.sqlite' --regions "$WORK/regions.json" --osm-date "$D"
-          python3 tools/nav/build_nav.py manifest --work "$WORK" --module search --pattern 'search-{id}.sqlite' --regions "$WORK/regions.json" --osm-date "$D"
+          # доповнити — Ізраїль (nav-il.yml) лишається
+          gh release download routes-latest -p manifest.json -O "$WORK/old-routes.json" --clobber || true
+          gh release download search-latest -p manifest.json -O "$WORK/old-search.json" --clobber || true
+          python3 tools/nav/build_nav.py manifest --work "$WORK" --module routes --pattern 'routes-{id}.tar,roads-{id}.sqlite' --regions "$WORK/regions.json" --osm-date "$D" --merge "$WORK/old-routes.json"
+          python3 tools/nav/build_nav.py manifest --work "$WORK" --module search --pattern 'search-{id}.sqlite' --regions "$WORK/regions.json" --osm-date "$D" --merge "$WORK/old-search.json"
       - name: Релізи routes-latest і search-latest
         run: |
           for t in routes search; do
-            gh release view $t-latest > /dev/null 2>&1 || gh release create $t-latest --title "Офлайн: $t (щомісяця)" \
+            gh release view $t-latest > /dev/null 2>&1 || gh release create $t-latest --latest=false --title "Офлайн: $t (щомісяця)" \
               --notes "Україна та області. Дані © OpenStreetMap contributors, ODbL. Використовує застосунок GNSS Nav для iOS."
             mkdir -p "up-$t" && cp "$WORK/manifest-$t.json" "up-$t/manifest.json"
           done

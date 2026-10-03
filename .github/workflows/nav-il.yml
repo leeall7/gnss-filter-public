@@ -1,0 +1,60 @@
+# Офлайн-маршрути (Valhalla) і пошук Ізраїлю для GNSS Nav (iOS). Пошук — назви івритом, англійська — окремо
+# (для англійського інтерфейсу), шукається будь-якою з мов (he, en, ru, ar, uk). Маніфести доповнюються.
+name: nav-il
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 9 3 * *"
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      GH_TOKEN: ${{ github.token }}
+      WORK: /mnt/work
+      VALHALLA_IMAGE: ghcr.io/valhalla/valhalla:3.6.3
+    steps:
+      - uses: actions/checkout@v5
+      - name: Диск
+        run: sudo mkdir -p /mnt/work && sudo chown "$(id -u):$(id -g)" /mnt/work && df -h /mnt
+      - name: Інструменти
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q osmium-tool
+          pip install osmium numpy --break-system-packages -q || pip install osmium numpy -q
+          docker pull "$VALHALLA_IMAGE" || { echo "VALHALLA_IMAGE=ghcr.io/valhalla/valhalla:latest" >> "$GITHUB_ENV"; docker pull ghcr.io/valhalla/valhalla:latest; }
+      - name: OSM (Geofabrik — Israel and Palestine)
+        run: |
+          curl -fsSL -o "$WORK/il.osm.pbf" https://download.geofabrik.de/asia/israel-and-palestine-latest.osm.pbf
+          osmium fileinfo -e -g header.option.osmosis_replication_timestamp "$WORK/il.osm.pbf" > "$WORK/osm_date.txt" || true
+          python3 -c "import json; json.dump({'IL': {'name': 'ישראל · Israel', 'bbox': [34.2,29.4,35.95,33.35]}}, open('$WORK/regions.json', 'w'), ensure_ascii=False)"
+      - name: Valhalla — Ізраїль
+        run: |
+          docker run --rm --user "$(id -u):$(id -g)" -v "$WORK:/data" "$VALHALLA_IMAGE" bash -c '
+            set -e
+            valhalla_build_config --mjolnir-concurrency 2 --mjolnir-tile-dir /data/vt --mjolnir-tile-extract /data/routes-IL.tar \
+              --mjolnir-admin /data/admins.sqlite --mjolnir-timezone /data/tz.sqlite > /data/valhalla.json
+            valhalla_build_timezones > /data/tz.sqlite || echo "часові пояси недоступні — без них"
+            valhalla_build_admins -c /data/valhalla.json /data/il.osm.pbf
+            valhalla_build_tiles -c /data/valhalla.json /data/il.osm.pbf
+            valhalla_build_extract -c /data/valhalla.json -v'
+          ls -la "$WORK/routes-IL.tar"
+      - name: Пошук (іврит + англійська)
+        run: python3 tools/nav/build_nav.py search --pbf "$WORK/il.osm.pbf" --out "$WORK/search-IL.sqlite" --lang he
+      - name: Маніфести (доповнити)
+        run: |
+          D="$(cat $WORK/osm_date.txt 2>/dev/null)"
+          gh release download routes-latest -p manifest.json -O "$WORK/old-routes.json" --clobber || true
+          gh release download search-latest -p manifest.json -O "$WORK/old-search.json" --clobber || true
+          python3 tools/nav/build_nav.py manifest --work "$WORK" --module routes --pattern 'routes-{id}.tar' --regions "$WORK/regions.json" --osm-date "$D" --merge "$WORK/old-routes.json"
+          python3 tools/nav/build_nav.py manifest --work "$WORK" --module search --pattern 'search-{id}.sqlite' --regions "$WORK/regions.json" --osm-date "$D" --merge "$WORK/old-search.json"
+      - name: Релізи routes-latest і search-latest
+        run: |
+          for t in routes search; do
+            gh release view $t-latest > /dev/null 2>&1 || gh release create $t-latest --latest=false --title "Офлайн: $t (щомісяця)" \
+              --notes "Україна, області, Ізраїль. Дані © OpenStreetMap contributors, ODbL. Використовує GNSS Nav для iOS."
+            mkdir -p "up-$t" && cp "$WORK/manifest-$t.json" "up-$t/manifest.json"
+          done
+          gh release upload routes-latest "$WORK/routes-IL.tar" up-routes/manifest.json --clobber
+          gh release upload search-latest "$WORK/search-IL.sqlite" up-search/manifest.json --clobber

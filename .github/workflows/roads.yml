@@ -61,6 +61,25 @@ jobs:
           osmium tags-filter ukraine-latest.osm.pbf w/highway -o ukraine-roads.osm.pbf
           ls -la ukraine-roads.osm.pbf
 
+      - name: Доповнення (обмеження швидкості, камери, переїзди, лежачі) — для GNSS Nav iOS
+        # окремий файл: ua-roads.bin не змінюється; Android, якому доповнення не потрібні, їх просто не завантажує.
+        # Камери часто — окремі точки поза дорогою, тому фільтр ширший за w/highway.
+        run: |
+          set -e
+          E=$(dirname "${{ steps.where.outputs.build }}")/build_extras.py
+          VE=$(dirname "${{ steps.where.outputs.verify }}")/verify_extras.py
+          osmium tags-filter ukraine-latest.osm.pbf w/highway n/highway=speed_camera n/enforcement \
+            n/railway=level_crossing n/traffic_calming -o extras-src.osm.pbf
+          if [ -n "${{ github.event.inputs.bbox }}" ]; then
+            python3 "$E" extras-src.osm.pbf region-extras.bin --bbox "${{ github.event.inputs.bbox }}"
+            python3 "$VE" region-extras.bin | tee region-extras.txt
+          else
+            python3 "$E" extras-src.osm.pbf ua-extras.bin
+            python3 "$VE" ua-extras.bin | tee ua-extras.txt
+            python3 "$E" extras-src.osm.pbf kyiv-extras.bin --bbox 49.3,29.2,51.6,32.2
+            python3 "$VE" kyiv-extras.bin | tee kyiv-extras.txt
+          fi
+
       - name: Контейнер
         env:
           BBOX: ${{ github.event.inputs.bbox }}
@@ -86,6 +105,30 @@ jobs:
       - name: Дата
         id: d
         run: echo "d=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+
+      - name: Маніфест для GNSS Nav iOS (розміри й SHA-256)
+        # лише для повної України; Android його не читає
+        if: ${{ github.event.inputs.bbox == '' || github.event.inputs.bbox == null }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          # Маніфест доповнюється, а не перезаписується: Україну оновлює roads.yml, Ізраїль — roads-il.yml.
+          import hashlib, json, os, datetime, subprocess
+          def ref(f):
+              return {'file': f, 'size': os.path.getsize(f), 'sha256': hashlib.sha256(open(f, 'rb').read()).hexdigest()}
+          old = {'regions': []}
+          if subprocess.run(['gh', 'release', 'download', 'roads-latest', '-p', 'manifest.json', '-O', 'manifest-old.json', '--clobber']).returncode == 0:
+              try: old = json.load(open('manifest-old.json', encoding='utf-8'))
+              except Exception: pass
+          mine = {'id': 'UA', 'name': 'Уся Україна', 'bbox': [22.1, 44.3, 40.3, 52.4], 'files': [ref('ua-roads.bin'), ref('ua-extras.bin')]}
+          regs = [r for r in old.get('regions', []) if r['id'] != mine['id']] + [mine]
+          m = {'schema': 1, 'module': 'roads',
+               'generated': datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+               'license': 'ODbL 1.0 — © OpenStreetMap contributors', 'regions': sorted(regs, key=lambda r: r['id'])}
+          json.dump(m, open('manifest.json', 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+          print(json.dumps(m, ensure_ascii=False)[:500])
+          PY
 
       - name: Artifacts
         uses: actions/upload-artifact@v7
@@ -131,4 +174,8 @@ jobs:
             ua-roads.txt
             kyiv-roads.bin
             kyiv-roads.txt
-            
+            ua-extras.bin
+            ua-extras.txt
+            kyiv-extras.bin
+            kyiv-extras.txt
+            manifest.json

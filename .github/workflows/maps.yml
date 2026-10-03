@@ -8,13 +8,18 @@ permissions:
   contents: write
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04      # закріплено: ubuntu-latest з 19.10.2026 → Ubuntu 26
     timeout-minutes: 180
     env:
       GH_TOKEN: ${{ github.token }}
-      WORK: work
+      WORK: /mnt/work
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+      - name: Пам'ять і диск
+        run: |
+          sudo mkdir -p /mnt/work && sudo chown "$(id -u):$(id -g)" /mnt/work
+          sudo fallocate -l 8G /mnt/swapfile && sudo chmod 600 /mnt/swapfile && sudo mkswap /mnt/swapfile && sudo swapon /mnt/swapfile
+          free -h; df -h / /mnt
       - name: Інструменти
         run: |
           sudo apt-get update -q && sudo apt-get install -y -q osmium-tool
@@ -43,10 +48,13 @@ jobs:
           python3 tools/maps/build_maps.py extract --work "$WORK" --planet "$PLANET"
       - name: Шрифти й значки
         run: python3 tools/maps/build_maps.py assets --work "$WORK" --assets-repo basemaps-assets
-      - name: Маніфест
-        run: python3 tools/maps/build_maps.py manifest --work "$WORK" --planet "$PLANET" --osm-date "$(cat $WORK/osm_date.txt 2>/dev/null)"
+      - name: Маніфест (доповнити — Ізраїль лишається)
+        run: |
+          gh release download maps-latest -p manifest.json -O "$WORK/old-manifest.json" --clobber || true
+          python3 tools/maps/build_maps.py manifest --work "$WORK" --planet "$PLANET" --osm-date "$(cat $WORK/osm_date.txt 2>/dev/null)" \
+            --merge "$WORK/old-manifest.json"
       - name: Реліз maps-latest
         run: |
-          gh release view maps-latest > /dev/null 2>&1 || gh release create maps-latest --title "Офлайн-мапи (щомісяця)" \
+          gh release view maps-latest > /dev/null 2>&1 || gh release create maps-latest --latest=false --title "Офлайн-мапи (щомісяця)" \
             --notes "Україна та області, PMTiles (Protomaps v4). Дані © OpenStreetMap contributors, ODbL. Використовує застосунок GNSS Nav для iOS."
           gh release upload maps-latest "$WORK"/map-*.pmtiles "$WORK/map-assets.tar" "$WORK/manifest.json" --clobber
