@@ -1,0 +1,49 @@
+# GNSS Filter — разова розвідка тек архівів ефемерид (лише читає списки, нічого не качає й не викладає).
+# Запуск: Actions → ephem-probe → Run workflow. Результат — у журналі кроку; після налаштування ephem-mirror.yml файл можна видалити.
+name: ephem-probe
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: List archive directories
+        shell: bash
+        run: |
+          set +e          # розвідка: помилка однієї адреси не зупиняє решту (bash у Actions — з -e)
+          set -u
+          Y=$(date -u +%Y); D=$(date -u +%j); YY=${Y:2:2}
+          P=$(date -u -d "-1 day" +%j)
+          echo "UTC: $(date -u +%FT%TZ), день $D, учора $P"
+          show() {   # $1 — адреса теки, $2 — фільтр (grep -i -E), $3 — скільки рядків
+            echo; echo "=== $1   [фільтр: ${2:-усе}]"
+            out=$(curl -sS --list-only --connect-timeout 20 --max-time 90 "$1" 2>&1); rc=$?
+            if [ $rc -ne 0 ]; then echo "  помилка curl $rc: $out" | head -n 3; return; fi
+            n=$(printf '%s\n' "$out" | wc -l)
+            if [ -n "${2:-}" ]; then printf '%s\n' "$out" | grep -i -E "$2" | head -n "${3:-30}"; else printf '%s\n' "$out" | head -n "${3:-30}"; fi
+            echo "  (усього рядків у теці: $n)"
+          }
+          L=$(date -u -d "-1 hour" +%H)       # остання завершена година
+          # ESA: щогодинні навігаційні файли станцій (RINEX 3, _MN — усі системи) за останню годину
+          show "ftp://gssc.esa.int/gnss/data/hourly/$Y/$D/$L/" "_MN\." 60
+          show "ftp://gssc.esa.int/gnss/data/hourly/$Y/$D/$L/" "" 10
+          # ESA: сьогоднішній brdc (RINEX 2) — розмір і час, щоб зрозуміти, чи оновлюється протягом дня
+          curl -sS --connect-timeout 20 --max-time 60 -I "ftp://gssc.esa.int/gnss/data/daily/$Y/$D/brdc${D}0.${YY}n.gz" 2>&1 | head -n 5
+          # Ухань: розкладка «gnss» (як у CDDIS) і щогодинні
+          show "ftp://igs.gnsswhu.cn/pub/gnss/" "" 10
+          show "ftp://igs.gnsswhu.cn/pub/gnss/data/daily/$Y/$P/" "" 20
+          show "ftp://igs.gnsswhu.cn/pub/gnss/data/daily/$Y/$P/${YY}p/" "brd" 20
+          show "ftp://igs.gnsswhu.cn/pub/gnss/data/daily/$Y/$D/${YY}p/" "brd" 20
+          show "ftp://igs.gnsswhu.cn/pub/gps/data/daily/$Y/$P/${YY}n/" "brd" 20
+          show "ftp://igs.gnsswhu.cn/pub/gnss/data/hourly/$Y/$D/" "" 30
+          # BKG / IGN — чи взагалі відповідають (лише заголовок)
+          for u in "https://igs.bkg.bund.de/" "https://igs.ign.fr/"; do
+            echo; echo "=== $u"
+            curl -sS -o /dev/null -w "  HTTP %{http_code}, %{time_total} с\n" --connect-timeout 20 --max-time 40 "$u" 2>&1 | head -n 2
+          done
