@@ -35,7 +35,7 @@ a fake location.
 You need a Google account (Gmail), the same one you use in Google Play on the
 phone.
 
-1. Write to **[t.me/gnssfilter](https://t.me/gnssfilter)** and send the Gmail
+1. Write to **gnssfilter@gmail.com** and send the Gmail
    address you use on your phone. We add it to the tester list by hand, so it
    may take a little while — no need to write twice.
 2. Once you get a reply confirming you're on the list, open this link **on
@@ -188,8 +188,7 @@ where something looked wrong.
 1. Open **Diagnostics → Logs ↗**.
 2. Choose **24 hours** or **7 days**.
 3. The archive is saved to **Downloads/GnssFilter** on the phone. Send that
-   file to **[t.me/gnssfilter](https://t.me/gnssfilter)** or to
-   **gnssfilter@gmail.com**.
+   file to **gnssfilter@gmail.com**.
 
 **The archive contains exact coordinates, time and speed of your trips.** Send
 it only if you are comfortable sharing that, and only to the address above.
@@ -295,7 +294,7 @@ GNSS Filter захищає навігацію на Android, коли GPS глу�
 Потрібен обліковий запис Google (Gmail), той самий, що в Google Play на
 телефоні.
 
-1. Напишіть у **[t.me/gnssfilter](https://t.me/gnssfilter)** і надішліть Gmail-адресу,
+1. Напишіть на **gnssfilter@gmail.com** і надішліть Gmail-адресу,
    яку використовуєте на телефоні. Ми додаємо адреси до списку вручну, тож це
    може зайняти трохи часу — писати вдруге не треба.
 2. Коли отримаєте підтвердження, що вас додано, відкрийте на телефоні:
@@ -446,8 +445,7 @@ OBD2-адаптером.** З ним застосунок читає справ�
 1. Відкрийте **Діагностика → Логи ↗**.
 2. Оберіть **24 години** або **7 днів**.
 3. Архів збережеться в **Downloads/GnssFilter** на телефоні. Надішліть цей
-   файл у **[t.me/gnssfilter](https://t.me/gnssfilter)** або на
-   **gnssfilter@gmail.com**.
+   файл на **gnssfilter@gmail.com**.
 
 **В архіві точні координати, час і швидкість ваших поїздок.** Надсилайте його,
 лише якщо готові цим поділитись, і лише на адресу вище. Сам застосунок логи
@@ -555,7 +553,7 @@ GNSS Filter מגן על הניווט באנדרואיד כאשר ה-GPS משוב
 
 נדרש חשבון Google ‏(Gmail) — אותו חשבון שבו אתם משתמשים ב-Google Play בטלפון.
 
-1. כתבו אל **[t.me/gnssfilter](https://t.me/gnssfilter)** ושלחו את כתובת
+1. כתבו אל **gnssfilter@gmail.com** ושלחו את כתובת
    ה-Gmail שבטלפון. אנחנו מוסיפים אותה לרשימת הבודקים ידנית, ולכן זה עשוי
    לקחת מעט זמן — אין צורך לכתוב שוב.
 2. לאחר שתקבלו תשובה שאתם ברשימה, פתחו את הקישור הזה **בטלפון**:
@@ -694,7 +692,6 @@ GNSS Filter מגן על הניווט באנדרואיד כאשר ה-GPS משוב
 1. פתחו **אבחון ← יומנים ↗**.
 2. בחרו **24 שעות** או **7 ימים**.
 3. הארכיון נשמר בטלפון בתיקייה **Downloads/GnssFilter**. שלחו את הקובץ אל
-   **[t.me/gnssfilter](https://t.me/gnssfilter)** או אל
    **gnssfilter@gmail.com**.
 
 **הארכיון מכיל קואורדינטות מדויקות, זמן ומהירות של הנסיעות שלכם.** שלחו אותו
