@@ -17,7 +17,7 @@ name: ephem-mirror
 
 on:
   schedule:
-    - cron: '23 * * * *'      # щогодини о :23 UTC (не на :00 — менше черги)
+    - cron: '7,22,37,52 * * * *'
   workflow_dispatch:
 
 permissions:
