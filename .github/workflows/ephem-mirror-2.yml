@@ -1,0 +1,275 @@
+# GNSS Filter — дзеркало ефемерид (v11.8.4). Покласти в публічний репозиторій gnss-filter-public:
+#   .github/workflows/ephem-mirror.yml
+#
+# Щогодини:
+#  1) зведені файли IGS за сьогодні й учора (UTC) — BRDC00WRD (BKG) і BRDM00DLR (DLR) — з першого архіву, що віддасть
+#     цілий RINEX: BKG, IGN (HTTPS), ESA GSSC (FTP, тека дня — там лише закриті дні). З 07.10.2026 BKG поза мережею
+#     (IGSMAIL-8764), IGN теж не відповідає;
+#  2) ВЛАСНИЙ зведений файл BRDC00GNF_S_<день>0000_01D_MN.rnx.gz — з щогодинних навігаційних файлів європейських станцій
+#     IGS на ESA GSSC за останні 3 години. Береться лише запис, який дослівно однаковий щонайменше у двох станцій (захист
+#     від помилки декодування на одній станції). Супутники — саме ті, що видно над Україною; свіжість — 1–2 год;
+#  3) усе це — без змін (крім власного BRDC00GNF) у реліз ephem-latest (попередній випуск, не «latest») і в гілку ephem
+#     (з неї ті самі файли віддають raw.githubusercontent.com і cdn.jsdelivr.net). Незмінений файл не перевикладається
+#     (застосунок отримує 304). Старші за вчора файли прибираються.
+# FTP і без шифрування — лише тут, у дата-центрі GitHub; телефон FTP не качає. NASA — не використовується (рішення).
+# Дані: International GNSS Service (IGS), https://igs.org, і ESA GSSC — відкриті, за умовами IGS (з посиланням на джерело).
+name: ephem-mirror
+
+on:
+  schedule:
+    - cron: '23 * * * *'      # щогодини о :23 UTC (не на :00 — менше черги)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ephem-mirror
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ephem-latest
+    steps:
+      - name: Release ephem-latest
+        shell: bash
+        run: |
+          if ! gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$TAG" -R "$GITHUB_REPOSITORY" --prerelease \
+              --title "Ephemeris mirror (IGS broadcast navigation)" \
+              --notes "Unchanged copies of the IGS merged broadcast navigation files BRDC00WRD (BKG) and BRDM00DLR (DLR) from the IGS data centres BKG, IGN and ESA GSSC, plus BRDC00GNF: our own merge of hourly navigation files of European IGS stations (ESA GSSC), only records identical at two or more stations. Today and yesterday (UTC), refreshed hourly for GNSS Filter. Data: International GNSS Service (IGS), https://igs.org, and ESA GSSC, under the IGS Data and Product Terms of Use."
+          fi
+
+      - name: Daily IGS files (BKG, IGN, ESA)
+        shell: bash
+        run: |
+          set -u
+          mkdir -p out
+          : > keep.txt
+          dead=" "      # архіви, що в цьому запуску не з'єднались (DNS, з'єднання, тайм-аут, TLS) — далі не чіпаємо
+          for back in 0 1; do
+            Y=$(date -u -d "-$back day" +%Y); D=$(date -u -d "-$back day" +%j)
+            echo "BRDC00GNF_S_${Y}${D}0000_01D_MN.rnx.gz" >> keep.txt
+            for prod in BRDC00WRD BRDM00DLR; do
+              name="${prod}_S_${Y}${D}0000_01D_MN.rnx.gz"
+              echo "$name" >> keep.txt
+              got=""
+              for base in "https://igs.bkg.bund.de/root_ftp/IGS/BRDC/$Y/$D" \
+                          "https://igs.ign.fr/pub/igs/data/$Y/$D" \
+                          "ftp://gssc.esa.int/gnss/data/daily/$Y/$D"; do
+                h="${base#*://}"; h="${h%%/*}"
+                case "$dead" in *" $h "*) continue ;; esac
+                rm -f "out/$name.tmp"
+                rc=0
+                curl -fsSL --retry 1 --retry-delay 5 --connect-timeout 20 --max-time 180 \
+                     -A "GnssFilter-ephem-mirror" -o "out/$name.tmp" "$base/$name" 2>/dev/null || rc=$?
+                case "$rc" in
+                  6|7|28|35) dead="$dead$h "; echo "не з'єднався ($rc): $h — далі в цьому запуску пропускаю" ;;
+                esac
+                if [ "$rc" -eq 0 ]; then
+                  # лише справжній RINEX: цілий gzip, не крихітний, перший рядок — заголовок RINEX
+                  if gzip -t "out/$name.tmp" 2>/dev/null && [ "$(stat -c %s "out/$name.tmp")" -gt 1000 ] \
+                     && zcat "out/$name.tmp" 2>/dev/null | head -n 1 | grep -q "RINEX VERSION / TYPE"; then
+                    mv "out/$name.tmp" "out/$name"; got="$base"; break
+                  fi
+                  echo "не RINEX: $base/$name"
+                fi
+              done
+              rm -f "out/$name.tmp"
+              if [ -n "$got" ]; then echo "є: $name з $got"; else echo "немає: $name"; fi
+            done
+          done
+
+      - name: Merge hourly files of European stations (ESA GSSC)
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import datetime as dt, ftplib, gzip, io, re, socket, sys
+          HOST = "gssc.esa.int"
+          # країни (код у назві станції): Європа й найближче — супутники ті самі, що над Україною
+          EU = set("AUT BEL BGR BIH CHE CYP CZE DEU DNK ESP EST FIN FRA GBR GEO GRC HRV HUN IRL ISL ITA LTU LUX LVA "
+                   "MDA MKD MLT MNE NLD NOR POL PRT ROU SRB SVK SVN SWE TUR UKR".split())
+          NAME = re.compile(r"^([A-Z0-9]{4})(\d{2})([A-Z]{3})_R_\d{11}_01H_MN\.rnx\.gz$")
+          MAX_PER_HOUR, HOURS, MIN_STATIONS = 30, 3, 2
+          KEEP_SYS = "GECJI"               # GLONASS і SBAS застосунок не вживає — не беремо (і різна довжина записів 3.04/3.05)
+          OLD_MSG = ("LNAV", "INAV", "FNAV", "D1", "D2")   # RINEX 4: лише повідомлення з будовою запису RINEX 3
+          now = dt.datetime.now(dt.timezone.utc)
+          socket.setdefaulttimeout(60)
+
+          def label(content, lab):
+              return content[:60].ljust(60) + lab
+
+          def parse(text):
+              lines = text.splitlines()
+              hdr, end = [], -1
+              for i, l in enumerate(lines):
+                  hdr.append(l.rstrip())
+                  if l[60:].startswith("END OF HEADER"):
+                      end = i
+                      break
+              if end < 0 or not hdr[0][60:].startswith("RINEX VERSION"):
+                  return None
+              recs, cur, skip = [], None, False
+              for l in lines[end + 1:]:
+                  if l.startswith(">"):                # RINEX 4: «> EPH G01 LNAV», «> ION …», «> STO …»
+                      if cur:
+                          recs.append(cur)
+                      cur = None
+                      f = l.split()
+                      skip = not (len(f) >= 4 and f[1] == "EPH" and f[3] in OLD_MSG)
+                      continue
+                  if len(l) >= 4 and l[0] in "GRECJIS" and l[1:3].strip().isdigit() and l[3] == " ":
+                      if cur:
+                          recs.append(cur)
+                      cur = None if (skip or l[0] not in KEEP_SYS) else [l.rstrip()]
+                      skip = False
+                  elif cur is not None and l.strip():
+                      cur.append(l.rstrip())
+              if cur:
+                  recs.append(cur)
+              return hdr, recs
+
+          try:
+              ftp = ftplib.FTP(HOST, timeout=60)
+              ftp.login()
+          except Exception as e:
+              print(f"ESA FTP недоступний: {e} — власного зведеного файла не буде")
+              sys.exit(0)
+
+          files = {}                       # (станція, година) -> текст
+          newest = None                    # остання година з даними — у заголовок (той самий вхід → той самий файл)
+          for k in range(1, HOURS + 1):
+              t = now - dt.timedelta(hours=k)
+              d = f"/gnss/data/hourly/{t:%Y}/{t.timetuple().tm_yday:03d}/{t:%H}/"
+              try:
+                  names = ftp.nlst(d)
+              except Exception as e:
+                  print(f"{d}: немає ({e})")
+                  continue
+              names = sorted(n.rsplit("/", 1)[-1] for n in names)
+              picked = [n for n in names if NAME.match(n) and NAME.match(n).group(3) in EU][:MAX_PER_HOUR]
+              ok = 0
+              for n in picked:
+                  buf = io.BytesIO()
+                  try:
+                      ftp.retrbinary("RETR " + d + n, buf.write)
+                      files[(n[:9], d)] = gzip.decompress(buf.getvalue()).decode("ascii", "replace")
+                      ok += 1
+                  except Exception as e:
+                      print(f"{d}{n}: {e}")
+              print(f"{d}: європейських станцій {len(picked)}, завантажено {ok}")
+              if ok and newest is None:
+                  newest = t.replace(minute=0, second=0, microsecond=0)
+          try:
+              ftp.quit()
+          except Exception:
+              pass
+
+          support, first, headers = {}, {}, []
+          for (sta, _), text in files.items():
+              p = parse(text)
+              if not p:
+                  continue
+              hdr, recs = p
+              headers.append(hdr)
+              for r in recs:
+                  key = "\n".join(x.replace("D", "E") for x in r)      # D/E у показнику — те саме число
+                  support.setdefault(key, set()).add(sta)
+                  first.setdefault(key, r)
+          kept = [first[k] for k, s in support.items() if len(s) >= MIN_STATIONS]
+          stations = {sta for (sta, _) in files}
+          by_sys = {}
+          for r in kept:
+              by_sys[r[0][0]] = by_sys.get(r[0][0], 0) + 1
+          print(f"станцій {len(stations)}, записів усього {len(support)}, підтверджених >= {MIN_STATIONS} станціями {len(kept)}: {by_sys}")
+          if not headers or by_sys.get("G", 0) + by_sys.get("E", 0) < 10:
+              print("замало підтверджених записів GPS/Galileo — власний зведений файл не викладаю")
+              sys.exit(0)
+
+          # заголовок — RINEX 3.04 (записи GPS/Galileo/BeiDou/QZSS/IRNSS у 3.04–3.05 і в LNAV/INAV/FNAV/D1/D2 RINEX 4
+          # однакові); іоносфера й поправки часу — із заголовка файла RINEX 3, якщо такий був
+          base = next((h for h in headers if h[0][:9].strip().startswith("3")), headers[0])
+          out = ["     3.04           N: GNSS NAV DATA    M: MIXED            RINEX VERSION / TYPE",
+                 label(f"{'gnss-filter-merge':<20}{'gnss-filter-public':<20}{newest:%Y%m%d %H%M%S} UTC", "PGM / RUN BY / DATE"),
+                 label(f"Merged hourly nav files, {len(stations)} European IGS stations", "COMMENT"),
+                 label(f"(ESA GSSC), last {HOURS} h; records identical at >= {MIN_STATIONS} stations", "COMMENT"),
+                 label("Data: International GNSS Service (IGS), https://igs.org", "COMMENT")]
+          if base[0][:9].strip().startswith("3"):
+              out += [l for l in base[1:] if l[60:].startswith(("IONOSPHERIC CORR", "TIME SYSTEM CORR", "LEAP SECONDS"))]
+          out.append(label("", "END OF HEADER"))
+          kept.sort(key=lambda r: (r[0][4:23], r[0][:3]))
+          for r in kept:
+              out.extend(r)
+          name = f"BRDC00GNF_S_{now:%Y}{now.timetuple().tm_yday:03d}0000_01D_MN.rnx.gz"
+          with open("out/" + name, "wb") as f:
+              f.write(gzip.compress(("\n".join(out) + "\n").encode("ascii"), mtime=0))
+          print(f"зведено: {name}, записів {len(kept)}")
+          PY
+
+      - name: Publish to release ephem-latest
+        shell: bash
+        run: |
+          set -u
+          n=0
+          for f in out/*.rnx.gz; do
+            [ -f "$f" ] || continue
+            name="${f#out/}"; n=$((n+1))
+            # той самий файл уже викладено — не чіпати (ETag лишається, застосунок отримає 304)
+            rm -rf prev && mkdir prev
+            if gh release download "$TAG" -R "$GITHUB_REPOSITORY" -p "$name" -D prev >/dev/null 2>&1 \
+               && cmp -s "prev/$name" "$f"; then
+              echo "без змін: $name"
+              continue
+            fi
+            gh release upload "$TAG" -R "$GITHUB_REPOSITORY" "$f" --clobber
+            echo "викладено: $name ($(stat -c %s "$f") Б)"
+          done
+          # прибрати з релізу все, крім сьогодні й учора
+          gh release view "$TAG" -R "$GITHUB_REPOSITORY" --json assets -q '.assets[].name' | while read -r a; do
+            [ -z "$a" ] && continue
+            if ! grep -qxF "$a" keep.txt; then
+              gh release delete-asset "$TAG" "$a" -R "$GITHUB_REPOSITORY" -y && echo "прибрано: $a"
+            fi
+          done
+          if [ "$n" -eq 0 ]; then
+            echo "Жодного файла не отримано — ні архіви IGS, ні щогодинні файли станцій ESA."
+            exit 1
+          fi
+
+      - name: Branch ephem (raw.githubusercontent.com, cdn.jsdelivr.net)
+        shell: bash
+        run: |
+          set -u
+          rm -rf br && mkdir br && cd br
+          gh release download "$TAG" -R "$GITHUB_REPOSITORY" -p '*.rnx.gz' -D . >/dev/null 2>&1 || true
+          if ! ls ./*.rnx.gz >/dev/null 2>&1; then echo "у релізі немає файлів — гілку не чіпаю"; exit 0; fi
+          printf '%s\n' \
+            "Copies of IGS broadcast navigation files and our merge BRDC00GNF (today and yesterday, UTC), refreshed hourly by ephem-mirror.yml." \
+            "Data: International GNSS Service (IGS), https://igs.org, and ESA GSSC, under the IGS Data and Product Terms of Use." > README.md
+          git init -q
+          git config user.name "ephem-mirror"
+          git config user.email "ephem-mirror@users.noreply.github.com"
+          git checkout -q --orphan ephem
+          git add -A
+          git commit -q -m "ephemeris $(date -u +%Y-%m-%dT%H:%MZ)"
+          url="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          # ті самі файли вже в гілці — не перевикладати (ETag на raw і jsDelivr лишається)
+          if git fetch -q --depth 1 "$url" ephem 2>/dev/null && git diff --quiet FETCH_HEAD HEAD; then
+            echo "гілка ephem без змін"
+            exit 0
+          fi
+          git push -q --force "$url" HEAD:ephem
+          echo "гілку ephem оновлено"
+          # jsDelivr тримає гілку в кеші до 12 год — просимо оновити файли одразу
+          for f in ./*.rnx.gz; do
+            n="${f#./}"
+            if curl -fsS --max-time 30 "https://purge.jsdelivr.net/gh/${GITHUB_REPOSITORY}@ephem/${n}" >/dev/null; then
+              echo "jsDelivr оновлено: ${n}"
+            else
+              echo "jsDelivr: не вдалось оновити ${n} (оновиться сам)"
+            fi
+          done
