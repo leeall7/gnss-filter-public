@@ -25,6 +25,12 @@ on:
 permissions:
   contents: write
 
+# Спільний маніфест у релізі roads-latest: парні workflow — по черзі, не одночасно (інакше той, хто запише
+# маніфест останнім, «загубить» регіон іншого).
+concurrency:
+  group: roads-latest
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -65,17 +71,22 @@ jobs:
         # окремий файл: ua-roads.bin не змінюється; Android, якому доповнення не потрібні, їх просто не завантажує.
         # Камери часто — окремі точки поза дорогою, тому фільтр ширший за w/highway.
         run: |
-          set -e
+          set -eo pipefail                                # перевірка впала — крок теж (verify | tee)
           E=$(dirname "${{ steps.where.outputs.build }}")/build_extras.py
           VE=$(dirname "${{ steps.where.outputs.verify }}")/verify_extras.py
-          osmium tags-filter ukraine-latest.osm.pbf w/highway n/highway=speed_camera n/enforcement \
+          osmium tags-filter ukraine-latest.osm.pbf w/highway n/highway=speed_camera n/enforcement r/enforcement \
             n/railway=level_crossing n/traffic_calming -o extras-src.osm.pbf
           if [ -n "${{ github.event.inputs.bbox }}" ]; then
             python3 "$E" extras-src.osm.pbf region-extras.bin --bbox "${{ github.event.inputs.bbox }}"
             python3 "$VE" region-extras.bin | tee region-extras.txt
+            python3 "$E" extras-src.osm.pbf region-extras2.bin --format 2 --bbox "${{ github.event.inputs.bbox }}"
+            python3 "$VE" region-extras2.bin | tee region-extras2.txt
           else
             python3 "$E" extras-src.osm.pbf ua-extras.bin
             python3 "$VE" ua-extras.bin | tee ua-extras.txt
+            # UAREX002 — з напрямком камер (GNSS Nav iOS 0.9.3+); UAREX001 лишається для старих застосунків
+            python3 "$E" extras-src.osm.pbf ua-extras2.bin --format 2
+            python3 "$VE" ua-extras2.bin | tee ua-extras2.txt
             python3 "$E" extras-src.osm.pbf kyiv-extras.bin --bbox 49.3,29.2,51.6,32.2
             python3 "$VE" kyiv-extras.bin | tee kyiv-extras.txt
           fi
@@ -121,7 +132,7 @@ jobs:
           if subprocess.run(['gh', 'release', 'download', 'roads-latest', '-p', 'manifest.json', '-O', 'manifest-old.json', '--clobber']).returncode == 0:
               try: old = json.load(open('manifest-old.json', encoding='utf-8'))
               except Exception: pass
-          mine = {'id': 'UA', 'name': 'Уся Україна', 'bbox': [22.1, 44.3, 40.3, 52.4], 'files': [ref('ua-roads.bin'), ref('ua-extras.bin')]}
+          mine = {'id': 'UA', 'name': 'Уся Україна', 'bbox': [22.1, 44.3, 40.3, 52.4], 'files': [ref('ua-roads.bin'), ref('ua-extras.bin'), ref('ua-extras2.bin')]}
           regs = [r for r in old.get('regions', []) if r['id'] != mine['id']] + [mine]
           m = {'schema': 1, 'module': 'roads',
                'generated': datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
@@ -176,6 +187,8 @@ jobs:
             kyiv-roads.txt
             ua-extras.bin
             ua-extras.txt
+            ua-extras2.bin
+            ua-extras2.txt
             kyiv-extras.bin
             kyiv-extras.txt
             manifest.json

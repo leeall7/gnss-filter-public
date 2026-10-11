@@ -1,6 +1,8 @@
-# Дороги Ізраїлю для GNSS Nav (iOS): той самий формат і ті самі скрипти, що й для України (UARDS001 + UAREX001).
-# Кладе il-roads.bin, il-extras.bin у постійний реліз roads-latest і доповнює manifest.json. Android це не зачіпає.
-name: Build road tiles (Israel, iOS)
+# Дороги Ізраїлю: той самий формат і ті самі скрипти, що й для України (UARDS001 + UAREX001).
+# Кладе il-roads.bin, il-extras.bin у постійний реліз roads-latest і доповнює manifest.json.
+# il-roads.bin бере і GNSS Filter (Android, з 11.4.3 — регіон «Ізраїль»), і GNSS Nav (iOS);
+# il-extras.bin і manifest.json — лише iOS.
+name: Build road tiles (Israel)
 
 on:
   workflow_dispatch:
@@ -9,6 +11,12 @@ on:
 
 permissions:
   contents: write
+
+# Спільний маніфест у релізі roads-latest: парні workflow — по черзі, не одночасно (інакше той, хто запише
+# маніфест останнім, «загубить» регіон іншого).
+concurrency:
+  group: roads-latest
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -26,14 +34,18 @@ jobs:
         run: |
           curl -fsSL -o il-latest.osm.pbf https://download.geofabrik.de/asia/israel-and-palestine-latest.osm.pbf
           osmium tags-filter il-latest.osm.pbf w/highway -o il-roads-src.osm.pbf
-          osmium tags-filter il-latest.osm.pbf w/highway n/highway=speed_camera n/enforcement \
+          osmium tags-filter il-latest.osm.pbf w/highway n/highway=speed_camera n/enforcement r/enforcement \
             n/railway=level_crossing n/traffic_calming -o il-extras-src.osm.pbf
       - name: Дороги й доповнення
         run: |
+          set -eo pipefail                                # перевірка впала — крок теж (verify | tee)
           python3 tools/roads/build_roads.py il-roads-src.osm.pbf il-roads.bin
           python3 tools/roads/verify_roads.py il-roads.bin | tee il-roads.txt
           python3 tools/roads/build_extras.py il-extras-src.osm.pbf il-extras.bin
           python3 tools/roads/verify_extras.py il-extras.bin | tee il-extras.txt
+          # UAREX002 — з напрямком камер (GNSS Nav iOS 0.9.3+)
+          python3 tools/roads/build_extras.py il-extras-src.osm.pbf il-extras2.bin --format 2
+          python3 tools/roads/verify_extras.py il-extras2.bin | tee il-extras2.txt
       - name: Маніфест (доповнити)
         run: |
           python3 - <<'PY'
@@ -45,7 +57,7 @@ jobs:
           if subprocess.run(['gh', 'release', 'download', 'roads-latest', '-p', 'manifest.json', '-O', 'manifest-old.json', '--clobber']).returncode == 0:
               try: old = json.load(open('manifest-old.json', encoding='utf-8'))
               except Exception: pass
-          mine = {'id': 'IL', 'name': 'ישראל · Israel', 'bbox': [34.2, 29.4, 35.95, 33.35], 'files': [ref('il-roads.bin'), ref('il-extras.bin')]}
+          mine = {'id': 'IL', 'name': 'ישראל · Israel', 'bbox': [34.2, 29.4, 35.95, 33.35], 'files': [ref('il-roads.bin'), ref('il-extras.bin'), ref('il-extras2.bin')]}
           regs = [r for r in old.get('regions', []) if r['id'] != mine['id']] + [mine]
           m = {'schema': 1, 'module': 'roads',
                'generated': datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
@@ -57,4 +69,4 @@ jobs:
         run: |
           gh release view roads-latest > /dev/null 2>&1 || gh release create roads-latest --latest=false --title "Дороги (постійна адреса)" \
             --notes "Дороги для GNSS Filter (Android) і GNSS Nav (iOS). © OpenStreetMap contributors, ODbL."
-          gh release upload roads-latest il-roads.bin il-extras.bin il-roads.txt il-extras.txt manifest.json --clobber
+          gh release upload roads-latest il-roads.bin il-extras.bin il-extras2.bin il-roads.txt il-extras.txt il-extras2.txt manifest.json --clobber
