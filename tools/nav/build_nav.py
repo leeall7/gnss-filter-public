@@ -331,9 +331,13 @@ def build_search(pbf, out):
         return r + info(nm)
     rows = [enrich(r) for r in rows]
     db.executemany('INSERT INTO item(kind,name,extra,lat,lon,rank,name_en,alt) VALUES(?,?,?,?,?,?,?,?)', rows)
-    db.execute('INSERT INTO fts(docid,name,extra,alt) SELECT id,name,extra,alt FROM item')
+    # апострофи в індексі — до одного ’ (U+2019): «Кам'янка», «Камʼянка», «Кам`янка» шукаються однаково (у FTS ’ — роздільник;
+    # застосунок ділить запит так само). Назви в item (показ) — як в OSM.
+    APOS = str.maketrans({"'": '\u2019', '\u02bc': '\u2019', '`': '\u2019', '\u2018': '\u2019', '\u02b9': '\u2019', '\u00b4': '\u2019'})
+    db.create_function('apos', 1, lambda v: v.translate(APOS) if isinstance(v, str) else v, deterministic=True)
+    db.execute('INSERT INTO fts(docid,name,extra,alt) SELECT id,apos(name),apos(extra),apos(alt) FROM item')
     db.execute('CREATE INDEX item_ll ON item(lat, lon)')
-    db.executemany('INSERT INTO meta VALUES(?,?)', [('format', 'gnss-search-1'), ('items', str(len(rows)))])
+    db.executemany('INSERT INTO meta VALUES(?,?)', [('format', 'gnss-search-1'), ('items', str(len(rows))), ('apos', '’')])
     db.commit(); db.execute("INSERT INTO fts(fts) VALUES('optimize')"); db.commit(); db.execute('VACUUM'); db.close()
     print(f'пошук: пунктів {len(places)}, вулиць {len(streets)}, адрес {len(addrs)}, об\'єктів {len(pois)} (з адресою {with_addr}) → {out} ({os.path.getsize(out)//1024} КБ)')
 
