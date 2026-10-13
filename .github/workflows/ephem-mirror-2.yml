@@ -1,5 +1,7 @@
-# GNSS Filter — дзеркало ефемерид (v11.8.4). Покласти в публічний репозиторій gnss-filter-public:
-#   .github/workflows/ephem-mirror.yml
+# GNSS Filter — дзеркало ефемерид (v11.8.4; v13.1.3 — накопичення за добу й прибирання старих запусків).
+# Покласти в публічний репозиторій gnss-filter-public:
+#   .github/workflows/ephem-mirror-2.yml   (саме під цією назвою — так файл уже називається в репозиторії; інструкція —
+#   EPHEM_MIRROR_SETUP.md у пакеті застосунку)
 #
 # Щогодини:
 #  1) зведені файли IGS за сьогодні й учора (UTC) — BRDC00WRD (BKG) і BRDM00DLR (DLR) — з першого архіву, що віддасть
@@ -11,17 +13,29 @@
 #  3) усе це — без змін (крім власного BRDC00GNF) у реліз ephem-latest (попередній випуск, не «latest») і в гілку ephem
 #     (з неї ті самі файли віддають raw.githubusercontent.com і cdn.jsdelivr.net). Незмінений файл не перевикладається
 #     (застосунок отримує 304). Старші за вчора файли прибираються.
+#  4) v13.1.3: BRDC00GNF за сьогодні НАКОПИЧУЄТЬСЯ: до нових записів (останні 3 год станцій) додаються всі записи вже
+#     викладеного сьогоднішнього файла. GitHub запускає розклад «щогодини» лише ~5 разів на добу (12.10.2026: з 08:09 UTC до
+#     13:28 — жодного), а зведення лише за 3 год між рідкими запусками лишало застосунок без жодної чинної ефемериди.
+#     Galileo (новий запис кожні 10 хв) — щонайбільше один запис на годину на кожне джерело (I/NAV, F/NAV): розмір файла.
+#  5) v13.1.3: запуски цієї задачі (і ephem-probe) старші за 2 доби видаляються — історія Actions не росте.
 # FTP і без шифрування — лише тут, у дата-центрі GitHub; телефон FTP не качає. NASA — не використовується (рішення).
 # Дані: International GNSS Service (IGS), https://igs.org, і ESA GSSC — відкриті, за умовами IGS (з посиланням на джерело).
 name: ephem-mirror
 
+# v13.1.5 (12.10.2026): ГОЛОВНИЙ запуск — зовнішній будильник cron-job.org щогодини о :15 UTC: POST
+#   https://api.github.com/repos/leeall7/gnss-filter-public/actions/workflows/<ім'я цього файла>/dispatches  {"ref":"main"}
+#   з токеном (fine-grained, лише цей репозиторій, лише Actions: write — коду змінити не може). Розклад GitHub нижче — лише
+#   запасний (його запуски GitHub пропускає: 12.10 при розкладі 4 рази на годину — ~5 запусків на добу).
 on:
   schedule:
-    - cron: '7,22,37,52 * * * *'
-  workflow_dispatch:
+    - cron: '45 * * * *'      # запасний: щогодини о :45 UTC (головний — будильник о :15; разом свіжість ≤ ~1 год)
+  workflow_dispatch:            # будильник cron-job.org і ручний запуск (Actions → ephem-mirror → Run workflow)
+  repository_dispatch:          # v13.1.3: інший спосіб для будильника (POST /repos/…/dispatches, type ephem; токен ширший)
+    types: [ephem]
 
 permissions:
   contents: write
+  actions: write                # v13.1.3: видалення старих запусків
 
 concurrency:
   group: ephem-mirror
@@ -84,6 +98,25 @@ jobs:
             done
           done
 
+      - name: Today's merge so far (accumulate)
+        shell: bash
+        run: |
+          # v13.1.3: уже викладений сьогоднішній BRDC00GNF — його записи лишаються в новому (рідкі запуски розкладу GitHub)
+          mkdir -p prevgnf
+          name="BRDC00GNF_S_$(date -u +%Y%j)0000_01D_MN.rnx.gz"
+          # «файла немає» (перший запуск доби) і «не вдалось прочитати» — різне: при збої накопичене не перезаписуємо
+          if ! names=$(gh release view "$TAG" -R "$GITHUB_REPOSITORY" --json assets -q '.assets[].name' 2>/dev/null); then
+            echo "реліз не прочитано — власний зведений файл цього разу не оновлюю"; touch prevgnf/.unknown
+          elif printf '%s\n' "$names" | grep -qxF "$name"; then
+            if gh release download "$TAG" -R "$GITHUB_REPOSITORY" -p "$name" -D prevgnf >/dev/null 2>&1; then
+              echo "є: $name — записи лишаються"
+            else
+              echo "не завантажено: $name — власний зведений файл цього разу не оновлюю"; touch prevgnf/.unknown
+            fi
+          else
+            echo "немає: $name (перший запуск доби)"
+          fi
+
       - name: Merge hourly files of European stations (ESA GSSC)
         shell: bash
         run: |
@@ -99,6 +132,11 @@ jobs:
           OLD_MSG = ("LNAV", "INAV", "FNAV", "D1", "D2")   # RINEX 4: лише повідомлення з будовою запису RINEX 3
           now = dt.datetime.now(dt.timezone.utc)
           socket.setdefaulttimeout(60)
+          import os
+          if os.path.exists("prevgnf/.unknown"):
+              # v13.1.3: сьогоднішній файл не прочитано (мережа / GitHub) — нове зведення лише за 3 год затерло б накопичене
+              print("попередній сьогоднішній файл не прочитано — власний зведений файл цього разу не оновлюю")
+              sys.exit(0)
 
           def label(content, lab):
               return content[:60].ljust(60) + lab
@@ -169,7 +207,31 @@ jobs:
           except Exception:
               pass
 
+          if not files:
+              # v13.1.3: нових годинних файлів немає — сьогоднішній файл лишається як є (раніше сюди не доходило: без файлів
+              # не було й заголовків; тепер заголовок дає попередній файл, а «newest» — ні)
+              print("нових годинних файлів станцій немає — сьогоднішній зведений файл лишається")
+              sys.exit(0)
           support, first, headers = {}, {}, []
+          # v13.1.3: записи вже викладеного сьогоднішнього файла — уже підтверджені двома станціями
+          import glob, os
+          prev_n, prev_headers = 0, []
+          for fn in sorted(glob.glob(os.path.join("prevgnf", "*.rnx.gz"))):
+              try:
+                  p = parse(gzip.decompress(open(fn, "rb").read()).decode("ascii", "replace"))
+              except Exception as e:
+                  print(f"{fn}: не прочитано ({e})")
+                  continue
+              if not p:
+                  continue
+              hdr, recs = p
+              prev_headers.append(hdr)        # заголовок попереднього — останнім (свіжі ION / поправки часу — зі станцій)
+              for r in recs:
+                  key = "\n".join(x.replace("D", "E") for x in r)
+                  support.setdefault(key, set()).update(("~prev1", "~prev2"))
+                  first.setdefault(key, r)
+                  prev_n += 1
+          print(f"з попереднього сьогоднішнього файла: записів {prev_n}")
           for (sta, _), text in files.items():
               p = parse(text)
               if not p:
@@ -180,8 +242,25 @@ jobs:
                   key = "\n".join(x.replace("D", "E") for x in r)      # D/E у показнику — те саме число
                   support.setdefault(key, set()).add(sta)
                   first.setdefault(key, r)
+          headers += prev_headers
           kept = [first[k] for k, s in support.items() if len(s) >= MIN_STATIONS]
-          stations = {sta for (sta, _) in files}
+          # v13.1.3: Galileo — щонайбільше один запис на годину для кожного супутника й джерела (I/NAV / F/NAV): за добу
+          # накопичення інакше ~6 тис. записів; найближча ефемерида тоді не далі 30 хв (похибка < 0,5 м на 0–3 год)
+          def gal_src(r):
+              try:
+                  return float(r[5][23:42].replace("D", "E"))
+              except Exception:
+                  return None
+          thin, seen = [], set()
+          for r in sorted(kept, key=lambda r: (r[0][:3], r[0][4:23])):
+              if r[0][0] == "E":
+                  k = (r[0][:3], r[0][4:17], gal_src(r))
+                  if k in seen:
+                      continue
+                  seen.add(k)
+              thin.append(r)
+          kept = thin
+          stations = {sta for (sta, _) in files}         # без «~prev» — це не станції
           by_sys = {}
           for r in kept:
               by_sys[r[0][0]] = by_sys.get(r[0][0], 0) + 1
@@ -192,11 +271,13 @@ jobs:
 
           # заголовок — RINEX 3.04 (записи GPS/Galileo/BeiDou/QZSS/IRNSS у 3.04–3.05 і в LNAV/INAV/FNAV/D1/D2 RINEX 4
           # однакові); іоносфера й поправки часу — із заголовка файла RINEX 3, якщо такий був
-          base = next((h for h in headers if h[0][:9].strip().startswith("3")), headers[0])
+          # v13.1.3: спершу — RINEX 3 з іоносферою (Klobuchar), далі будь-який RINEX 3; заголовок попереднього файла — останній
+          r3 = [h for h in headers if h[0][:9].strip().startswith("3")]
+          base = next((h for h in r3 if any(l[60:].startswith("IONOSPHERIC CORR") for l in h)), r3[0] if r3 else headers[0])
           out = ["     3.04           N: GNSS NAV DATA    M: MIXED            RINEX VERSION / TYPE",
                  label(f"{'gnss-filter-merge':<20}{'gnss-filter-public':<20}{newest:%Y%m%d %H%M%S} UTC", "PGM / RUN BY / DATE"),
                  label(f"Merged hourly nav files, {len(stations)} European IGS stations", "COMMENT"),
-                 label(f"(ESA GSSC), last {HOURS} h; records identical at >= {MIN_STATIONS} stations", "COMMENT"),
+                 label(f"(ESA GSSC), last {HOURS} h + earlier today; identical >= {MIN_STATIONS} sta", "COMMENT"),
                  label("Data: International GNSS Service (IGS), https://igs.org", "COMMENT")]
           if base[0][:9].strip().startswith("3"):
               out += [l for l in base[1:] if l[60:].startswith(("IONOSPHERIC CORR", "TIME SYSTEM CORR", "LEAP SECONDS"))]
@@ -273,3 +354,24 @@ jobs:
               echo "jsDelivr: не вдалось оновити ${n} (оновиться сам)"
             fi
           done
+
+      - name: Delete old runs (ephem-mirror, ephem-probe)
+        if: always()
+        shell: bash
+        run: |
+          # v13.1.3: історія Actions — лише за 2 доби; поточний і незавершені запуски не чіпаємо
+          set -u
+          cutoff=$(date -u -d '-2 day' +%Y-%m-%dT%H:%M:%SZ)
+          n=0
+          # v13.1.7 (13.10): ім'я файла цієї задачі — з GITHUB_WORKFLOW_REF (у gnss-filter-public вона лежить як ephem-mirror-2.yml;
+          # з жорстко прописаним ephem-mirror.yml старі запуски не видалялись)
+          self=${GITHUB_WORKFLOW_REF%@*}; self=${self##*/}
+          for wf in "$self" ephem-probe.yml; do
+            ids=$(gh api -X GET "repos/$GITHUB_REPOSITORY/actions/workflows/$wf/runs" -f per_page=100 --paginate \
+                    -q ".workflow_runs[] | select(.status == \"completed\" and .created_at < \"$cutoff\") | .id" 2>/dev/null || true)
+            for id in $ids; do
+              [ "$id" = "$GITHUB_RUN_ID" ] && continue
+              if gh api -X DELETE "repos/$GITHUB_REPOSITORY/actions/runs/$id" >/dev/null 2>&1; then n=$((n+1)); fi
+            done
+          done
+          echo "видалено старих запусків: $n (старші за $cutoff)"
