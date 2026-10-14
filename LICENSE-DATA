@@ -2,6 +2,7 @@ Data files published in this repository's Releases are derived from OpenStreetMa
 
   - road network files: ua-roads.bin, kyiv-roads.bin, il-roads.bin
   - road extras (speed limits, cameras, level crossings, traffic calming): *-extras.bin
+  - building outlines: *-buildings.bin (with manifests buildings-*.json)
   - map tiles: map-*.pmtiles (Protomaps Basemap — a Produced Work under the ODbL)
   - routing and search data: *.sqlite
   - manifests describing these files: manifest.json
@@ -18,5 +19,6 @@ Database Contents License: https://opendatacommons.org/licenses/dbcl/1-0/
 Sources: Geofabrik extracts of OpenStreetMap (europe/ukraine-latest.osm.pbf,
 asia/israel-and-palestine-latest.osm.pbf); Protomaps planet build (map tiles).
 Built with the scripts in tools/ (roads: tools/roads/build_roads.py, format
-tools/roads/FORMAT.md; extras: tools/roads/build_extras.py, format
+tools/roads/FORMAT.md; buildings: tools/buildings/build_buildings.py, format
+tools/buildings/FORMAT_BUILDINGS.md; extras: tools/roads/build_extras.py, format
 tools/roads/FORMAT_EXTRAS.md; maps: tools/maps; routing and search: tools/nav).
