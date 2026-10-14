@@ -7,6 +7,12 @@ on:
     - cron: "0 7 3 * *"
 permissions:
   contents: write
+
+# Спільний маніфест у релізі maps-latest: парні workflow — по черзі, не одночасно (інакше той, хто запише
+# маніфест останнім, «загубить» регіон іншого).
+concurrency:
+  group: maps-latest
+  cancel-in-progress: false
 jobs:
   build:
     runs-on: ubuntu-24.04
@@ -52,4 +58,7 @@ jobs:
         run: |
           gh release view maps-latest > /dev/null 2>&1 || gh release create maps-latest --latest=false --title "Офлайн-мапи (щомісяця)" \
             --notes "Україна, області, Ізраїль — PMTiles (Protomaps v4). Дані © OpenStreetMap contributors, ODbL."
-          gh release upload maps-latest "$WORK/map-IL.pmtiles" "$WORK/map-assets.tar" "$WORK/manifest.json" --clobber
+          # 0.9.7 (iOS): маніфест — окремо й ПІСЛЯ файлів (--clobber спершу видаляє файл; так телефон не бачить нового маніфесту
+          # зі старим файлом чи 404)
+          gh release upload maps-latest "$WORK/map-IL.pmtiles" "$WORK/map-assets.tar" --clobber
+          gh release upload maps-latest "$WORK/manifest.json" --clobber

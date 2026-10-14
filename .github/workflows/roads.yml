@@ -191,4 +191,10 @@ jobs:
             ua-extras2.txt
             kyiv-extras.bin
             kyiv-extras.txt
-            manifest.json
+
+      - name: Маніфест roads-latest — після файлів
+        # 0.9.7 (iOS): маніфест окремо й ПІСЛЯ файлів — телефон не бачить нового маніфесту зі старим файлом чи 404
+        if: ${{ github.event.inputs.bbox == '' || github.event.inputs.bbox == null }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload roads-latest manifest.json --clobber --repo "${{ github.repository }}"

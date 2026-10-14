@@ -69,4 +69,7 @@ jobs:
         run: |
           gh release view roads-latest > /dev/null 2>&1 || gh release create roads-latest --latest=false --title "Дороги (постійна адреса)" \
             --notes "Дороги для GNSS Filter (Android) і GNSS Nav (iOS). © OpenStreetMap contributors, ODbL."
-          gh release upload roads-latest il-roads.bin il-extras.bin il-extras2.bin il-roads.txt il-extras.txt il-extras2.txt manifest.json --clobber
+          # 0.9.7 (iOS): маніфест — окремо й ПІСЛЯ файлів (--clobber спершу видаляє файл; так телефон не бачить нового маніфесту
+          # зі старим файлом чи 404)
+          gh release upload roads-latest il-roads.bin il-extras.bin il-extras2.bin il-roads.txt il-extras.txt il-extras2.txt --clobber
+          gh release upload roads-latest manifest.json --clobber

@@ -7,6 +7,12 @@ on:
     - cron: "0 5 2 * *"
 permissions:
   contents: write
+
+# Спільний маніфест у релізі nav-latest: парні workflow — по черзі, не одночасно (інакше той, хто запише
+# маніфест останнім, «загубить» регіон іншого).
+concurrency:
+  group: nav-latest
+  cancel-in-progress: false
 jobs:
   build:
     runs-on: ubuntu-24.04      # закріплено: ubuntu-latest з 19.10.2026 → Ubuntu 26
@@ -110,5 +116,9 @@ jobs:
               --notes "Україна та області. Дані © OpenStreetMap contributors, ODbL. Використовує застосунок GNSS Nav для iOS."
             mkdir -p "up-$t" && cp "$WORK/manifest-$t.json" "up-$t/manifest.json"
           done
-          gh release upload routes-latest "$WORK"/routes-*.tar "$WORK"/roads-*.sqlite up-routes/manifest.json --clobber
-          gh release upload search-latest "$WORK"/search-*.sqlite up-search/manifest.json --clobber
+          # 0.9.7 (iOS): маніфест — окремо й ПІСЛЯ файлів (--clobber спершу видаляє файл; так телефон не бачить нового маніфесту
+          # зі старим файлом чи 404)
+          gh release upload routes-latest "$WORK"/routes-*.tar "$WORK"/roads-*.sqlite --clobber
+          gh release upload search-latest "$WORK"/search-*.sqlite --clobber
+          gh release upload routes-latest up-routes/manifest.json --clobber
+          gh release upload search-latest up-search/manifest.json --clobber
