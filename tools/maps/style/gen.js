@@ -7,7 +7,7 @@ console.log('мови:', ['uk', 'en', 'he'].map(l => l + ':' + b.language_script
 const day = { ...b.namedFlavor('light'),
   background: '#efeae1', earth: '#efeae1',
   park_a: '#d6e6c8', park_b: '#cfe1bf', wood_a: '#d3e3c4', wood_b: '#c9dcb8', scrub_a: '#dde8cf', scrub_b: '#d6e3c6',
-  water: '#a9cbe6', buildings: '#e0d9cd',
+  water: '#a9cbe6', buildings: '#cfc5b6',   // 0.7.30: будинки контрастніші (було #e0d9cd з прозорістю 0,5 — зливались)
   hospital: '#f2dcdc', school: '#ece3cf', industrial: '#e6e1d8', military: '#e6dcd6', aerodrome: '#e4e1ea',
   highway: '#f6c46a', highway_casing_early: '#c98f2c', highway_casing_late: '#c98f2c',
   major: '#ffffff', major_casing_early: '#b9b1a4', major_casing_late: '#b9b1a4',
@@ -41,6 +41,16 @@ for (const lang of ['uk', 'en', 'he'])
   for (const [kind, name, fl] of [['day', 'День', day], ['night', 'Ніч', night]]) runs.push([`style-${kind}-${lang}.json`, name, fl, lang]);
 for (const [file, name, fl, lang] of runs) {
   const s = style(name, fl, lang);
+  if (fl === day) {
+    // 0.7.30: день — будинки непрозорі й з контуром (на екрані авто зливались із фоном і дорогами)
+    const i = s.layers.findIndex(l => l.id === 'buildings');
+    if (i >= 0) {
+      s.layers[i].paint = { 'fill-color': '#cfc5b6', 'fill-opacity': 1 };
+      s.layers.splice(i + 1, 0, { id: 'buildings_outline', type: 'line', source: 'protomaps', 'source-layer': 'buildings',
+        minzoom: 14, filter: ['in', 'kind', 'building', 'building_part'],
+        paint: { 'line-color': '#9b907f', 'line-width': ['interpolate', ['linear'], ['zoom'], 14, 0.4, 16, 0.8, 18, 1.2] } });
+    }
+  }
   // валідатор не знає плейсхолдерів — підставляємо зразкові значення лише для перевірки
   // шрифти — під назвами тек в архіві (без пробілів: шлях до локального файла не залежить від кодування URL)
   let txt = JSON.stringify(s).replace(/Noto Sans Regular/g, 'NotoSans-Regular').replace(/Noto Sans Medium/g, 'NotoSans-Medium')
