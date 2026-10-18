@@ -1,6 +1,6 @@
 # Privacy Policy — GNSS Filter
 
-Last updated: 3 October 2026
+Last updated: 18 October 2026
 
 *Українська версія — нижче / Ukrainian version below. · [גרסה בעברית — למטה](#מדיניות-פרטיות--gnss-filter-בעברית).*
 
@@ -20,13 +20,13 @@ fake GPS one. All processing happens **exclusively on the user's device**.
 | Bluetooth (connection to the vehicle's OBD adapter) | Independent evidence of speed from the wheels | On the device only, directly from the adapter in the vehicle |
 | Vehicle identification number (VIN), read from the car through the OBD adapter; if the car does not report it, the adapter's Bluetooth address is used instead | Keeping the speed calibration separately for each car (the real speed always differs from the speedometer) | On the device only: in the app settings and in the local logs. Not stored in Block Store and never transmitted by the app; it leaves the device only if you share a log yourself |
 | Accelerometer, gyroscope, barometer (phone sensors) | Motion detection, heading, altitude | On the device only |
-| Internet access | Downloading ephemeris (satellite orbits) from the open IGS scientific archives: `igs.bkg.bund.de`, `igs.ign.fr`; a short time check against the same servers at app start, when the network reconnects and every few hours while running (only the time from the HTTPS response header is used); map tiles (see below); the optional roads map for snapping — a single file from the project's public repository on GitHub (`github.com`, `objects.githubusercontent.com`), downloaded only when the user requests it in the advanced menu; Google Play services for the purchase and Block Store (see below) | For ephemeris and the time check the app sends nothing; it is a plain HTTPS file request, identical for everyone. As with any request to a web server, the server sees the device's IP address |
-| Local logs (`Android/data/com.gnssfilter/files/logs/`, 14 days): positions and movements, signal measurements, the vehicle's VIN | Diagnostics and field testing | On the device only; the app never sends them anywhere by itself. The user may manually export or share a log file at their own discretion; the exported archive is encrypted with the developer's public key, so only the developer can read it |
+| Internet access | Downloading ephemeris (satellite orbits): an unchanged copy of the open IGS scientific archives in the project's public GitHub repository (`github.com`, `release-assets.githubusercontent.com`, `raw.githubusercontent.com`, and the same copy via the jsDelivr CDN, `cdn.jsdelivr.net`), or directly from the archives `igs.bkg.bund.de`, `igs.ign.fr`; the source that worked last time is tried first; a short time check against the same servers at app start, when the network reconnects and every few hours while running (only the time from the HTTPS response header is used); map tiles (see below); the optional roads map for snapping — a single file from the project's public repository on GitHub (`github.com`, `release-assets.githubusercontent.com`), offered on first launch and via the «Roads» button, downloaded only when the user confirms; once in 30 days, when the app screen is opened, a short request to the same address checks whether a newer roads map is available; Google Play services for the purchase, Block Store and in-app updates (see below) | For ephemeris and the time check the app sends nothing; it is a plain HTTPS file request, identical for everyone. As with any request to a web server, the server sees the device's IP address |
+| Local logs (`Android/data/com.gnssfilter/files/logs/`, 14 days): positions and movements, signal measurements, the vehicle's VIN | Diagnostics and field testing | On the device only; the app never sends them anywhere by itself. The user may manually export or share a log file at their own discretion; the exported archive is encrypted with the developer's public key, so only the developer can read it. The archive is saved in the phone's Downloads/GnssFilter folder and stays there (also after the app is uninstalled) until you delete it |
 | Map tiles (OpenStreetMap) — only when you open the "Adjust car position on the map" screen. The Google Play version does not use satellite imagery | Letting you place the car and its heading on a map by hand | The tile servers receive requests for the map tiles you are viewing, as with any online map. The screen opens centred on the car, so these requests reveal the approximate area you are in (roughly a few hundred metres) to the tile provider (OpenStreetMap Foundation; in test builds distributed outside Google Play with the satellite layer enabled, also Esri). No trip, identifier or exact coordinates are sent; tiles you have viewed are kept in the app's private storage (up to 300 MB) so the map also works without internet; without internet the screen draws roads from the road network file already on the phone |
-| Roads map (`…/files/roads/`, up to ~130 MB): road geometry from OpenStreetMap, no user data | Snapping the position to known roads (optional, advanced menu) | On the device only; downloaded from the project's public GitHub repository or copied manually |
+| Roads map (`…/files/roads/`, up to ~130 MB): road geometry from OpenStreetMap, no user data | Snapping the position to known roads (optional) | On the device only; downloaded from the project's public GitHub repository or copied manually |
 
-The app **does not collect, transmit or sell** any data to third parties.
-No analytics, no advertising SDKs, no trackers.
+Apart from the map-tile requests described above, the app **does not collect, transmit or sell**
+any data to third parties. No analytics, no advertising SDKs, no trackers.
 
 ## Permissions
 
@@ -35,12 +35,13 @@ No analytics, no advertising SDKs, no trackers.
 - **Foreground service + notifications** — so the app keeps working and its
   active status stays visible while the screen is off or other apps are open.
 - **Internet** (INTERNET, ACCESS_NETWORK_STATE) — for downloading ephemeris
-  from the open IGS archives, a short time check against the same servers (at
+  from the open IGS archives (or their unchanged copy in the project's public
+  GitHub repository), a short time check against the same servers (at
   app start, when the network reconnects and every few hours while running), and,
-  while the map screen is open, map tiles, and — only on the user's request in
-  the advanced menu — the roads map file from the project's public GitHub
-  repository;
-  Google Play services use it for the purchase and Block Store. Ephemeris and
+  while the map screen is open, map tiles, and — when the user confirms — the
+  roads map file from the project's public GitHub repository (plus a check for
+  a newer file once in 30 days);
+  Google Play services use it for the purchase, Block Store and in-app updates. Ephemeris and
   time-check requests contain no coordinates, identifiers or any other user data; map
   tile requests reveal only the approximate area shown on the map.
 - **Wi-Fi state** (ACCESS_WIFI_STATE) — only the number of visible Wi-Fi
@@ -99,7 +100,7 @@ gnssfilter@gmail.com
 
 # Політика конфіденційності — GNSS Filter (українською)
 
-Востаннє оновлено: 03.10.2026
+Востаннє оновлено: 18.10.2026
 
 ## Що робить застосунок
 
@@ -117,13 +118,13 @@ GNSS Filter перевіряє позицію GPS на пристрої кори
 | Bluetooth (підключення до OBD-адаптера авто) | Незалежний доказ швидкості руху з коліс | Лише на пристрої, напряму з адаптера в авто |
 | Ідентифікаційний номер авто (VIN), зчитаний через OBD-адаптер; якщо авто його не повідомляє — замість нього адреса Bluetooth адаптера | Щоб калібрування швидкості зберігалось окремо для кожного авто (реальна швидкість завжди відрізняється від спідометра) | Лише на пристрої: у налаштуваннях застосунку й у локальних логах. У Block Store не зберігається, застосунок його нікуди не передає; з пристрою він потрапляє лише тоді, коли ви самі надсилаєте лог |
 | Акселерометр, гіроскоп, барометр (сенсори телефону) | Детектор руху, курс, висота | Лише на пристрої |
-| Доступ до інтернету | Завантаження ефемерид (орбіт супутників) з відкритих наукових архівів IGS: `igs.bkg.bund.de`, `igs.ign.fr`; коротка звірка часу з тими самими серверами на старті, при появі мережі й раз на кілька годин під час роботи (береться лише час із заголовка HTTPS-відповіді); тайли карти (див. нижче); необов'язкова карта доріг для прив'язки — один файл з публічного репозиторію проєкту на GitHub (`github.com`, `objects.githubusercontent.com`), лише на запит користувача в меню для досвідчених; сервіси Google Play для покупки й Block Store (див. нижче) | Для ефемерид і звірки часу застосунок нічого не надсилає; це звичайний HTTPS-запит на файл, однаковий для всіх. Як і за будь-якого звернення до вебсервера, сервер бачить IP-адресу пристрою |
-| Локальні логи (`Android/data/com.gnssfilter/files/logs/`, 14 діб): позиції й переміщення, виміри сигналу, VIN авто | Діагностика й польові випробування | Лише на пристрої; застосунок сам їх нікуди не надсилає. Користувач може вручну експортувати чи поділитись файлом логу на власний розсуд; вивантажений архів шифрується публічним ключем розробника — прочитати його може лише розробник |
+| Доступ до інтернету | Завантаження ефемерид (орбіт супутників): незмінена копія відкритих наукових архівів IGS у публічному репозиторії проєкту на GitHub (`github.com`, `release-assets.githubusercontent.com`, `raw.githubusercontent.com`, і та сама копія через CDN jsDelivr, `cdn.jsdelivr.net`) або напряму з архівів `igs.bkg.bund.de`, `igs.ign.fr`; першим пробується джерело, що спрацювало минулого разу; коротка звірка часу з тими самими серверами на старті, при появі мережі й раз на кілька годин під час роботи (береться лише час із заголовка HTTPS-відповіді); тайли карти (див. нижче); необов'язкова карта доріг для прив'язки — один файл з публічного репозиторію проєкту на GitHub (`github.com`, `release-assets.githubusercontent.com`); застосунок пропонує її на першому запуску й кнопкою «Дороги», завантажує лише після підтвердження користувача; раз на 30 днів, коли відкрито екран застосунку, короткий запит на ту саму адресу перевіряє, чи є новіша карта доріг; сервіси Google Play для покупки, Block Store й оновлення застосунку (див. нижче) | Для ефемерид і звірки часу застосунок нічого не надсилає; це звичайний HTTPS-запит на файл, однаковий для всіх. Як і за будь-якого звернення до вебсервера, сервер бачить IP-адресу пристрою |
+| Локальні логи (`Android/data/com.gnssfilter/files/logs/`, 14 діб): позиції й переміщення, виміри сигналу, VIN авто | Діагностика й польові випробування | Лише на пристрої; застосунок сам їх нікуди не надсилає. Користувач може вручну експортувати чи поділитись файлом логу на власний розсуд; вивантажений архів шифрується публічним ключем розробника — прочитати його може лише розробник. Архів зберігається в теці телефона Downloads/GnssFilter і лишається там (і після видалення застосунку), доки ви його не видалите |
 | Тайли карти (OpenStreetMap) — лише коли ви відкриваєте екран «Уточнити позицію авто на карті». Версія з Google Play супутникових знімків не використовує | Щоб поставити авто і його курс на карті вручну | Сервери карти отримують запити на фрагменти карти, які ви переглядаєте, як у будь-якій онлайн-карті. Екран відкривається з центром у позиції авто, тож ці запити розкривають постачальнику карти (OpenStreetMap Foundation; у тестових збірках поза Google Play з увімкненим супутниковим шаром — також Esri) приблизну місцевість, де ви є (порядку кількох сотень метрів). Трек, ідентифікатори чи точні координати не передаються; переглянуті тайли зберігаються в закритій теці застосунку (до 300 МБ), щоб карта працювала й без інтернету; без інтернету екран малює дороги зі схеми доріг, яка вже є на телефоні |
-| Карта доріг (`…/files/roads/`, до ~130 МБ): геометрія доріг з OpenStreetMap, без даних користувача | Прив'язка позиції до відомих доріг (необов'язково, меню для досвідчених) | Лише на пристрої; завантажується з публічного репозиторію проєкту на GitHub або копіюється вручну |
+| Карта доріг (`…/files/roads/`, до ~130 МБ): геометрія доріг з OpenStreetMap, без даних користувача | Прив'язка позиції до відомих доріг (необов'язково) | Лише на пристрої; завантажується з публічного репозиторію проєкту на GitHub або копіюється вручну |
 
-Застосунок **не збирає, не передає і не продає** жодні дані третім сторонам.
-Немає аналітики, немає рекламних SDK, немає трекерів.
+Окрім описаних вище запитів тайлів карти, застосунок **не збирає, не передає і не продає**
+жодні дані третім сторонам. Немає аналітики, немає рекламних SDK, немає трекерів.
 
 ## Дозволи
 
@@ -132,12 +133,13 @@ GNSS Filter перевіряє позицію GPS на пристрої кори
 - **Foreground service + сповіщення** — щоб застосунок продовжував працювати
   й було видно його активний стан, поки екран вимкнено чи відкриті інші застосунки.
 - **Інтернет** (INTERNET, ACCESS_NETWORK_STATE) — для завантаження ефемерид
-  із відкритих архівів IGS, короткої звірки часу з тими самими серверами (на
+  із відкритих архівів IGS (або їх незміненої копії в публічному репозиторії
+  проєкту на GitHub), короткої звірки часу з тими самими серверами (на
   старті, при появі мережі й раз на кілька годин під час роботи) і, поки відкрито
-  екран карти, тайлів карти, і — лише на запит користувача в меню для
-  досвідчених — файлу карти доріг з публічного репозиторію проєкту на GitHub;
-  сервіси
-  Google Play використовують його для покупки й Block Store. У запитах ефемерид
+  екран карти, тайлів карти, і — після підтвердження користувача — файлу карти
+  доріг з публічного репозиторію проєкту на GitHub (і перевірки новішого файла
+  раз на 30 днів); сервіси Google Play використовують його для покупки, Block Store
+  й оновлення застосунку. У запитах ефемерид
   і звірки часу немає координат, ідентифікаторів чи інших даних користувача; запити тайлів
   розкривають лише приблизну місцевість, показану на карті.
 - **Стан Wi-Fi** (ACCESS_WIFI_STATE) — використовується лише кількість видимих
@@ -198,7 +200,7 @@ gnssfilter@gmail.com
 
 # מדיניות פרטיות — GNSS Filter (בעברית)
 
-עודכן לאחרונה: 3 באוקטובר 2026
+עודכן לאחרונה: 18 באוקטובר 2026
 
 *תרגום מהנוסח האנגלי שלמעלה. התרגום אינו של דובר שפת אם; במקרה של אי-התאמה —
 הנוסח האנגלי קובע.*
@@ -218,13 +220,13 @@ GNSS Filter מאמתת את מיקום ה-GPS במכשיר של המשתמש (מ
 | Bluetooth (חיבור למתאם ה-OBD של הרכב) | ראיה בלתי תלויה למהירות מהגלגלים | במכשיר בלבד, ישירות מהמתאם שברכב |
 | מספר זיהוי הרכב (VIN), הנקרא מהרכב דרך מתאם ה-OBD; אם הרכב אינו מדווח אותו, משמשת במקומו כתובת ה-Bluetooth של המתאם | שמירת כיול המהירות בנפרד לכל רכב (המהירות האמיתית תמיד שונה ממד המהירות) | במכשיר בלבד: בהגדרות האפליקציה וביומנים המקומיים. אינו נשמר ב-Block Store ואינו מועבר לעולם על ידי האפליקציה; הוא יוצא מהמכשיר רק אם אתם משתפים יומן בעצמכם |
 | מד תאוצה, ג'ירוסקופ, ברומטר (חיישני הטלפון) | זיהוי תנועה, כיוון, גובה | במכשיר בלבד |
-| גישה לאינטרנט | הורדת אפמריס (מסלולי לוויינים) מהארכיונים המדעיים הפתוחים של IGS: ‏`igs.bkg.bund.de`, ‏`igs.ign.fr`; בדיקת שעה קצרה מול אותם שרתים בהפעלת האפליקציה, כשהרשת מתחברת מחדש ומדי כמה שעות בזמן הפעולה (נעשה שימוש רק בשעה מכותרת תגובת ה-HTTPS); אריחי מפה (ראו למטה); מפת הכבישים האופציונלית להצמדה — קובץ יחיד מהמאגר הציבורי של הפרויקט ב-GitHub ‏(`github.com`, ‏`objects.githubusercontent.com`), שיורד רק כשהמשתמש מבקש זאת בתפריט המתקדם; שירותי Google Play לרכישה ול-Block Store (ראו למטה) | עבור האפמריס ובדיקת השעה האפליקציה אינה שולחת דבר; זו בקשת קובץ HTTPS פשוטה, זהה לכולם. כמו בכל בקשה לשרת אינטרנט, השרת רואה את כתובת ה-IP של המכשיר |
-| יומנים מקומיים (`Android/data/com.gnssfilter/files/logs/`, ‏14 יום): מיקומים ותנועות, מדידות אות, ה-VIN של הרכב | אבחון ובדיקות שטח | במכשיר בלבד; האפליקציה אף פעם לא שולחת אותם בעצמה. המשתמש רשאי לייצא או לשתף קובץ יומן ידנית לפי שיקול דעתו; הארכיון המיוצא מוצפן במפתח הציבורי של המפתח, כך שרק המפתח יכול לקרוא אותו |
+| גישה לאינטרנט | הורדת אפמריס (מסלולי לוויינים): עותק ללא שינוי של הארכיונים המדעיים הפתוחים של IGS במאגר הציבורי של הפרויקט ב-GitHub ‏(`github.com`, ‏`release-assets.githubusercontent.com`, ‏`raw.githubusercontent.com`, ואותו עותק דרך רשת ה-CDN של jsDelivr, ‏`cdn.jsdelivr.net`), או ישירות מהארכיונים ‏`igs.bkg.bund.de`, ‏`igs.ign.fr`; המקור שעבד בפעם הקודמת נבדק ראשון; בדיקת שעה קצרה מול אותם שרתים בהפעלת האפליקציה, כשהרשת מתחברת מחדש ומדי כמה שעות בזמן הפעולה (נעשה שימוש רק בשעה מכותרת תגובת ה-HTTPS); אריחי מפה (ראו למטה); מפת הכבישים האופציונלית להצמדה — קובץ יחיד מהמאגר הציבורי של הפרויקט ב-GitHub ‏(`github.com`, ‏`release-assets.githubusercontent.com`); האפליקציה מציעה אותה בהפעלה הראשונה ובכפתור «כבישים», והיא יורדת רק לאחר אישור המשתמש; אחת ל-30 יום, כשמסך האפליקציה נפתח, בקשה קצרה לאותה כתובת בודקת אם יש מפת כבישים חדשה יותר; שירותי Google Play לרכישה, ל-Block Store ולעדכוני האפליקציה (ראו למטה) | עבור האפמריס ובדיקת השעה האפליקציה אינה שולחת דבר; זו בקשת קובץ HTTPS פשוטה, זהה לכולם. כמו בכל בקשה לשרת אינטרנט, השרת רואה את כתובת ה-IP של המכשיר |
+| יומנים מקומיים (`Android/data/com.gnssfilter/files/logs/`, ‏14 יום): מיקומים ותנועות, מדידות אות, ה-VIN של הרכב | אבחון ובדיקות שטח | במכשיר בלבד; האפליקציה אף פעם לא שולחת אותם בעצמה. המשתמש רשאי לייצא או לשתף קובץ יומן ידנית לפי שיקול דעתו; הארכיון המיוצא מוצפן במפתח הציבורי של המפתח, כך שרק המפתח יכול לקרוא אותו. הארכיון נשמר בתיקיית הטלפון Downloads/GnssFilter ונשאר שם (גם אחרי הסרת האפליקציה) עד שתמחקו אותו |
 | אריחי מפה (OpenStreetMap) — רק כשאתם פותחים את מסך "כוונון מיקום הרכב על המפה". הגרסה ב-Google Play אינה משתמשת בצילומי לוויין | מאפשר למקם את הרכב ואת כיוונו על המפה ידנית | שרתי האריחים מקבלים בקשות לאריחים שאתם צופים בהם, כמו בכל מפה מקוונת. המסך נפתח כשמרכזו ברכב, ולכן הבקשות חושפות את האזור המשוער שבו אתם נמצאים (בערך כמה מאות מטרים) לספק האריחים (OpenStreetMap Foundation; בגרסאות בדיקה המופצות מחוץ ל-Google Play עם שכבת הלוויין מופעלת — גם Esri). שום נסיעה, מזהה או קואורדינטות מדויקות אינם נשלחים; אריחים שצפיתם בהם נשמרים באחסון הפרטי של האפליקציה (עד 300 MB) כדי שהמפה תעבוד גם ללא אינטרנט; ללא אינטרנט המסך מצייר כבישים ממפת הכבישים שכבר נמצאת בטלפון |
-| מפת כבישים (`…/files/roads/`, עד כ-130 MB): גאומטריית כבישים מ-OpenStreetMap, ללא נתוני משתמש | הצמדת המיקום לכבישים ידועים (אופציונלי, תפריט מתקדם) | במכשיר בלבד; יורדת מהמאגר הציבורי של הפרויקט ב-GitHub או מועתקת ידנית |
+| מפת כבישים (`…/files/roads/`, עד כ-130 MB): גאומטריית כבישים מ-OpenStreetMap, ללא נתוני משתמש | הצמדת המיקום לכבישים ידועים (אופציונלי) | במכשיר בלבד; יורדת מהמאגר הציבורי של הפרויקט ב-GitHub או מועתקת ידנית |
 
-האפליקציה **אינה אוספת, מעבירה או מוכרת** נתונים כלשהם לצדדים שלישיים.
-ללא אנליטיקה, ללא SDK של פרסום, ללא רכיבי מעקב.
+מלבד בקשות אריחי המפה שתוארו למעלה, האפליקציה **אינה אוספת, מעבירה או מוכרת** נתונים
+כלשהם לצדדים שלישיים. ללא אנליטיקה, ללא SDK של פרסום, ללא רכיבי מעקב.
 
 ## הרשאות
 
@@ -233,10 +235,11 @@ GNSS Filter מאמתת את מיקום ה-GPS במכשיר של המשתמש (מ
 - **שירות בחזית + התראות** — כדי שהאפליקציה תמשיך לפעול והמצב הפעיל שלה יישאר
   גלוי כשהמסך כבוי או כשאפליקציות אחרות פתוחות.
 - **אינטרנט** (INTERNET, ACCESS_NETWORK_STATE) — להורדת אפמריס מארכיוני IGS
-  הפתוחים, לבדיקת שעה קצרה מול אותם שרתים (בהפעלת האפליקציה, כשהרשת מתחברת
-  מחדש ומדי כמה שעות בזמן הפעולה), לאריחי מפה בזמן שמסך המפה פתוח, ורק לבקשת
-  המשתמש בתפריט המתקדם — לקובץ מפת הכבישים מהמאגר הציבורי של הפרויקט ב-GitHub;
-  שירותי Google Play משתמשים בו לרכישה ול-Block Store. בקשות האפמריס ובדיקת
+  הפתוחים (או מעותק ללא שינוי שלהם במאגר הציבורי של הפרויקט ב-GitHub), לבדיקת שעה קצרה מול אותם שרתים (בהפעלת האפליקציה, כשהרשת מתחברת
+  מחדש ומדי כמה שעות בזמן הפעולה), לאריחי מפה בזמן שמסך המפה פתוח, ולאחר אישור
+  המשתמש — לקובץ מפת הכבישים מהמאגר הציבורי של הפרויקט ב-GitHub (ובדיקת קובץ
+  חדש יותר אחת ל-30 יום); שירותי Google Play משתמשים בו לרכישה, ל-Block Store
+  ולעדכוני האפליקציה. בקשות האפמריס ובדיקת
   השעה אינן מכילות קואורדינטות, מזהים או נתוני משתמש אחרים; בקשות אריחי המפה
   חושפות רק את האזור המשוער המוצג במפה.
 - **מצב Wi-Fi** (ACCESS_WIFI_STATE) — נעשה שימוש רק במספר רשתות ה-Wi-Fi
