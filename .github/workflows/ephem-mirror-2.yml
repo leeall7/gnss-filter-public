@@ -18,6 +18,8 @@
 #     13:28 — жодного), а зведення лише за 3 год між рідкими запусками лишало застосунок без жодної чинної ефемериди.
 #     Galileo (новий запис кожні 10 хв) — щонайбільше один запис на годину на кожне джерело (I/NAV, F/NAV): розмір файла.
 #  5) v13.1.3: запуски цієї задачі (і ephem-probe) старші за 2 доби видаляються — історія Actions не росте.
+#  6) v13.1.16 (аудит етапу 4): денні файли IGS справді викладаються (перевірка RINEX під pipefail, А4-1); запуск без
+#     сьогоднішнього BRDC00GNF — червоний (А4-3).
 # FTP і без шифрування — лише тут, у дата-центрі GitHub; телефон FTP не качає. NASA — не використовується (рішення).
 # Дані: International GNSS Service (IGS), https://igs.org, і ESA GSSC — відкриті, за умовами IGS (з посиланням на джерело).
 name: ephem-mirror
@@ -86,8 +88,11 @@ jobs:
                 esac
                 if [ "$rc" -eq 0 ]; then
                   # лише справжній RINEX: цілий gzip, не крихітний, перший рядок — заголовок RINEX
+                  # v13.1.16 (аудит етапу 4, А4-1): `shell: bash` у GitHub — це `bash -eo pipefail`; head закривається після першого
+                  # рядка, zcat великого файла дістає SIGPIPE (код 141), і з pipefail умова була хибною для КОЖНОГО справжнього файла
+                  # («не RINEX») — денні BRDC00WRD / BRDM00DLR на дзеркало не потрапляли з 11.8.4. Код zcat тут не важить (gzip -t вище).
                   if gzip -t "out/$name.tmp" 2>/dev/null && [ "$(stat -c %s "out/$name.tmp")" -gt 1000 ] \
-                     && zcat "out/$name.tmp" 2>/dev/null | head -n 1 | grep -q "RINEX VERSION / TYPE"; then
+                     && { zcat "out/$name.tmp" 2>/dev/null || true; } | head -n 1 | grep -q "RINEX VERSION / TYPE"; then
                     mv "out/$name.tmp" "out/$name"; got="$base"; break
                   fi
                   echo "не RINEX: $base/$name"
@@ -354,6 +359,20 @@ jobs:
               echo "jsDelivr: не вдалось оновити ${n} (оновиться сам)"
             fi
           done
+
+      - name: Today's BRDC00GNF updated
+        shell: bash
+        run: |
+          # v13.1.16 (аудит етапу 4, А4-3): без свіжого власного зведення запуск — червоний (GitHub надішле лист), навіть коли
+          # інші файли є (напр. учорашній BRDM00DLR): інакше застаріле дзеркало мовчить, як 12.10 (5+ год без чинних ефемерид).
+          # Крок зведення кладе в out/ сьогоднішній BRDC00GNF (і тоді, коли він не змінився); не кладе — коли зведення цього разу не було
+          # (ESA FTP недоступний, за 3 год немає годинних файлів, замало записів, сьогоднішній файл не прочитано) — тобто дзеркало не оновилось.
+          if ls out/BRDC00GNF_S_*_01D_MN.rnx.gz >/dev/null 2>&1; then
+            echo "BRDC00GNF є: $(ls out/BRDC00GNF_S_*_01D_MN.rnx.gz)"
+          else
+            echo "::error::BRDC00GNF цього разу не зведено (ESA GSSC / реліз недоступні або замало записів) — дзеркало старіє"
+            exit 1
+          fi
 
       - name: Delete old runs (ephem-mirror, ephem-probe)
         if: always()
