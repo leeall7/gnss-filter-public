@@ -1,17 +1,17 @@
 # Політика конфіденційності — GNSS Nav для iPhone
 
-Чинна з 14 жовтня 2026 року (попередня редакція — з 12 жовтня 2026). Розробник: ФОП Лі Олександр, Україна. Контакт: gnssfilter@gmail.com.
+Чинна з 18 жовтня 2026 року (попередня редакція — з 16 жовтня 2026). Розробник: ФОП Лі Олександр, Україна. Контакт: gnssfilter@gmail.com.
 
 **Коротко.** GNSS Nav — навігатор, стійкий до глушіння й підміни GPS. Усе обчислюється на вашому
-iPhone. Застосунок не має реєстрації, реклами й аналітики, не передає ваші поїздки розробникові чи
-третім сторонам і нічого не збирає про вас.
+iPhone. Застосунок не має реєстрації, реклами й аналітики, сам нічого не збирає про вас і не передає ваші поїздки
+розробникові чи третім сторонам — технічні логи потрапляють до розробника, лише якщо ви самі їх надішлете (розділ «Логи»).
 
 ## Які дані застосунок використовує і де вони лишаються
 
 | Дані | Навіщо | Де зберігаються |
 |---|---|---|
 | **Геолокація** (GPS та мережеве визначення позиції iOS), зокрема у фоні під час поїздки | перевірка GPS, числення, ведення маршрутом | лише на телефоні |
-| **Датчики руху** (гіроскоп, акселерометр, компас, активність, барометр) | числення, курс, виявлення руху; барометр — зміна висоти в технічному лозі | лише на телефоні |
+| **Датчики руху** (гіроскоп, акселерометр, активність, барометр) | числення, курс, виявлення руху; барометр — зміна висоти в технічному лозі | лише на телефоні |
 | **Мікрофон і розпізнавання мовлення** — лише коли ви натискаєте «Голосом» / мікрофон у пошуку | голосовий ввід адреси | звук обробляє служба розпізнавання мовлення Apple; застосунок отримує лише текст, звук не зберігає |
 | **OBD-адаптер через Bluetooth** (швидкість коліс, передача, VIN авто) | числення, калібрування для вашого авто | лише на телефоні; VIN — ключ до збережених калібрувань |
 | **Офлайн-вміст** (мапи, маршрути, пошук) | робота без інтернету | завантажується з публічного репозиторію GitHub на телефон |
@@ -22,9 +22,11 @@ iPhone. Застосунок не має реєстрації, реклами й
 ## Логи
 
 Під час поїздки застосунок веде технічні логи (CSV): позиції, час, вердикти, дані OBD (зокрема VIN і назву
-адаптера), датчики, назви пунктів призначення й розпізнані голосові запити, модель телефона й версію iOS, заряд батареї.
+адаптера), датчики, назви пунктів призначення й розпізнані голосові запити, модель телефона й версію iOS, заряд батареї,
+а також журнал подій — зокрема тексти голосових підказок і вказівок маневрів маршруту (і маршрутів Apple в онлайн-режимі).
 Вони **зберігаються лише на телефоні** (не потрапляють у резервні копії) 14 днів, а потім видаляються самі. Їх можна
-видалити будь-коли: «Деталі → Очистити логи».
+видалити будь-коли: «Деталі → Очистити логи». Файли логів видно й вам: застосунок «Файли» → «На iPhone» → GNSS Nav
+(або спільний доступ до файлів у Finder на комп'ютері).
 
 Логи передаються розробникові **лише якщо ви самі натиснете «Надіслати логи»** і виберете, куди їх
 надіслати. Перед надсиланням архів шифрується публічним ключем розробника (AES-256-GCM, RSA-OAEP):
@@ -40,7 +42,7 @@ iPhone. Застосунок не має реєстрації, реклами й
 - **Голосовий ввід адреси** (лише коли ви його запускаєте): сказане розпізнає служба мовлення Apple (на телефоні або на
   серверах Apple) — так само, як диктування iOS. Обробляє Apple за власною політикою конфіденційності; розробник звуку не отримує; розпізнаний текст
   записується в технічний лог і потрапляє до розробника лише разом із логами, якщо ви їх надішлете.
-- **Службові перевірки без ваших даних:** точний час — короткий запит HTTPS до github.com (заголовок Date); чи справді є
+- **Службові перевірки без ваших даних:** точний час — короткий запит HTTPS до raw.githubusercontent.com (GitHub, заголовок Date); чи справді є
   інтернет після його втрати — короткий запит до captive.apple.com (так перевіряє мережу й сама iOS). Жодних даних про вас
   чи поїздку в цих запитах немає.
 - **Онлайн-режим** (типово увімкнений після вашої згоди у вікні-попередженні, вимикається в «Деталях»): мапа, затори, маршрути й пошук — від Apple
@@ -79,11 +81,11 @@ Keychain і випадкового ідентифікатора цього iPhon
 
 # Privacy Policy — GNSS Nav for iPhone
 
-Effective 14 October 2026 (previous version: 12 October 2026). Developer: Oleksandr Li (private entrepreneur), Ukraine. Contact: gnssfilter@gmail.com.
+Effective 18 October 2026 (previous version: 16 October 2026). Developer: Oleksandr Li (private entrepreneur), Ukraine. Contact: gnssfilter@gmail.com.
 
 **In short.** GNSS Nav is a car navigator that keeps working when GPS is jammed or spoofed. Everything is
-computed on your iPhone. There is no account, no ads, no analytics; your trips are never sent to the
-developer or to third parties; the app collects nothing about you.
+computed on your iPhone. There is no account, no ads, no analytics; the app collects nothing about you on its own and
+never sends your trips to the developer or to third parties — technical logs reach the developer only if you send them yourself (see Logs).
 
 **Data the app uses, and where it stays:** location (GPS and iOS network positioning, also in the
 background during a drive), motion sensors (including the barometer), microphone and speech recognition (voice address
@@ -93,9 +95,11 @@ repository, the one-time purchase handled by Apple, the trial-distance counter (
 settings. All of it stays on the device.
 
 **Logs.** During a drive the app writes technical CSV logs (positions, time, verdicts, OBD data including
-VIN and adapter name, sensors, destination names and recognised voice queries, device model, iOS version, battery level).
+VIN and adapter name, sensors, destination names and recognised voice queries, device model, iOS version, battery level,
+and an event journal with the texts of voice prompts and route maneuver instructions, including Apple Maps routes in online mode).
 They stay on the device (excluded from backups) for 14 days and are then deleted; you can delete
-them any time (Details → Clear logs). Logs leave the device only when you tap "Send logs" and choose a
+them any time (Details → Clear logs). You can see the log files yourself in the Files app (On My iPhone → GNSS Nav)
+or via file sharing in Finder on a computer. Logs leave the device only when you tap "Send logs" and choose a
 destination; the archive is encrypted with the developer's public key (AES-256-GCM, RSA-OAEP) so only the
 developer can read it. If encryption fails, the app warns you and the archive is plain.
 
@@ -106,7 +110,7 @@ routes and search come from Apple (MapKit); to show the map and compute a route 
 destination and search query, as the Maps app does — processed by Apple under its privacy policy; the developer does
 not see these requests. In offline mode Apple receives no map, route or search requests. **Voice address input** (only when you start it): what you say is recognised by Apple's speech
 service (on the device or on Apple servers), as with iOS dictation; the app receives only text and stores no audio; the developer never
-receives audio, and the recognised text is written to the technical log and reaches the developer only if you send logs. **Service checks without your data:** a short HTTPS request to github.com for accurate time (Date header) and,
+receives audio, and the recognised text is written to the technical log and reaches the developer only if you send logs. **Service checks without your data:** a short HTTPS request to raw.githubusercontent.com (GitHub) for accurate time (Date header) and,
 after the internet was lost, a short request to captive.apple.com to confirm it is back (as iOS itself does). Nothing else
 is sent; maps, routing and search work offline.
 
