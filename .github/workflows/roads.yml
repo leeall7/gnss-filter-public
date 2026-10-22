@@ -1,10 +1,38 @@
+# GNSS Filter (Android) / GNSS Nav (iOS) — схеми доріг для прив'язки. СПІЛЬНИЙ workflow (22.10.2026): замінює колишні roads.yml
+# (Україна), roads-il.yml (Ізраїль) і заготовку roads-countries.yml. Після першого успішного повного запуску roads-il.yml — видалити.
+#
+# Покласти в публічний репозиторій gnss-filter-public:
+#   .github/workflows/roads.yml          (замість старого, та сама назва)
+#   tools/roads/build_region.py          (нове — збирання одного регіону)
+#   tools/roads/roads_index.py           (нове — перевірка файлів, roads-index.json, manifest.json)
+# build_roads.py, verify_roads.py, build_extras.py, verify_extras.py — наявні в tools/roads/, не змінюються.
+#
+# Що робить (кожен регіон — окремий раннер, паралельно):
+#  1) витяг Geofabrik + md5 → osmium tags-filter → build_roads.py (0.025°, 2 м, track) → verify_roads.py → перевірка файлу
+#     (заголовок, ≥ 1 МБ, ≤ 600 МБ — межа застосунку, біля столиці є дорога). Понад 300 МБ — лише попередження, файл викладається.
+#     UA та IL — ще й доповнення для iOS (*-extras.bin, *-extras2.bin), UA — ще й kyiv-roads.bin / kyiv-extras.bin — як раніше;
+#  2) UA — датований реліз roads-ДАТА-N з «Latest» (на нього Android переходить, якщо roads-latest недоступний) — як раніше;
+#  3) усе придатне → постійний реліз roads-latest (--clobber); регіон, що не пройшов перевірку, не викладається зовсім;
+#  4) наприкінці, ПІСЛЯ всіх файлів, одним кроком (без гонок між workflow):
+#     - roads-index.json (Android) — усі *-roads.bin, що справді лежать у roads-latest;
+#     - manifest.json (iOS) — той самий формат, лише регіони UA та IL; запис регіону змінюється, лише якщо його файли викладено
+#       в цьому запуску (запуск лише «lt» маніфест iOS не чіпає).
+#
+# Ручний запуск: Actions → «Build road tiles» → Run workflow. regions — порожньо = усі, або «lt» / «lt,pl»; bbox — тестова рамка
+# України (minlat,minlon,maxlat,maxlon): лише region-*.bin у датований prerelease, roads-latest не змінюється — як раніше.
+# Нова країна — рядок у REGIONS (шлях Geofabrik, підписи uk / en / he, точка-проба).
+
 name: Build road tiles
 
 on:
   workflow_dispatch:
     inputs:
+      regions:
+        description: 'Регіони через кому (порожньо = усі): ua, il, lt, lv, ee, fi, pl'
+        required: false
+        default: ''
       bbox:
-        description: 'Рамка minlat,minlon,maxlat,maxlon (порожньо = вся Україна)'
+        description: 'Тестова рамка України minlat,minlon,maxlat,maxlon (порожньо = звичайне збирання)'
         required: false
         default: ''
       track:
@@ -20,32 +48,105 @@ on:
         required: false
         default: '0.025'
   schedule:
-    - cron: '17 3 1 * *'      # першого числа щомісяця
+    - cron: '17 3 1 * *'      # першого числа щомісяця — усі регіони
 
 permissions:
   contents: write
 
-# Спільний маніфест у релізі roads-latest: парні workflow — по черзі, не одночасно (інакше той, хто запише
-# маніфест останнім, «загубить» регіон іншого).
+# Спільний реліз roads-latest — по черзі, не одночасно (та сама черга, що в колишніх roads.yml / roads-il.yml).
 concurrency:
   group: roads-latest
   cancel-in-progress: false
 
+env:
+  TAG: roads-latest
+  WARN_MB: '300'
+  # cc — ім'я файлу <cc>-roads.bin; path — шлях на download.geofabrik.de без «-latest.osm.pbf»; probe — точка в столиці, біля якої
+  # мусить бути дорога; extras — доповнення для iOS; ios — запис у manifest.json (як було); dated — датований реліз «Latest»;
+  # parts — частини з того ж витягу (рамка); bbox_mode — регіон для тестової рамки.
+  REGIONS: >-
+    [
+     {"cc":"ua","path":"europe/ukraine","probe":"50.4501,30.5234",
+      "label":{"uk":"Уся Україна","en":"All of Ukraine","he":"כל אוקראינה"},
+      "extras":true,"dated":true,"bbox_mode":true,
+      "ios":{"id":"UA","name":"Уся Україна","bbox":[22.1,44.3,40.3,52.4]},
+      "parts":[{"cc":"kyiv","bbox":"49.3,29.2,51.6,32.2","extras":true,
+                "label":{"uk":"Лише Київщина (для тестів)","en":"Kyiv region only (for tests)","he":"מחוז קייב בלבד (לבדיקות)"}}]},
+     {"cc":"il","path":"asia/israel-and-palestine","probe":"32.0853,34.7818",
+      "label":{"uk":"Ізраїль","en":"Israel","he":"ישראל"},
+      "extras":true,
+      "ios":{"id":"IL","name":"ישראל · Israel","bbox":[34.2,29.4,35.95,33.35]}},
+     {"cc":"lt","path":"europe/lithuania","probe":"54.6872,25.2797","label":{"uk":"Литва","en":"Lithuania","he":"ליטא"}},
+     {"cc":"lv","path":"europe/latvia","probe":"56.9496,24.1052","label":{"uk":"Латвія","en":"Latvia","he":"לטביה"}},
+     {"cc":"ee","path":"europe/estonia","probe":"59.4370,24.7536","label":{"uk":"Естонія","en":"Estonia","he":"אסטוניה"}},
+     {"cc":"fi","path":"europe/finland","probe":"60.1699,24.9384","label":{"uk":"Фінляндія","en":"Finland","he":"פינלנד"}},
+     {"cc":"pl","path":"europe/poland","probe":"52.2297,21.0122","label":{"uk":"Польща","en":"Poland","he":"פולין"}}
+    ]
+
 jobs:
-  build:
+  setup:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    outputs:
+      matrix: ${{ steps.m.outputs.matrix }}
+      since: ${{ steps.m.outputs.since }}
+      bbox: ${{ steps.m.outputs.bbox }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - id: m
+        env:
+          WANT: ${{ github.event.inputs.regions }}
+          BBOX: ${{ github.event.inputs.bbox }}
+        run: |
+          python3 - <<'PY'
+          import datetime, json, os
+          allr = json.loads(os.environ['REGIONS'])
+          bbox = (os.environ.get('BBOX') or '').strip()
+          want = [x.strip().lower() for x in (os.environ.get('WANT') or '').split(',') if x.strip()]
+          known = {r['cc'] for r in allr}
+          bad = [w for w in want if w not in known]
+          if bad:
+              raise SystemExit(f'невідомі регіони: {bad}; є: {sorted(known)}')
+          if bbox:
+              sel = [r for r in allr if r.get('bbox_mode')]          # рамка — лише Україна, як раніше
+          else:
+              sel = [r for r in allr if not want or r['cc'] in want]
+          since = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write('matrix=' + json.dumps({'include': sel}, ensure_ascii=False) + '\n')
+              f.write(f'since={since}\nbbox={bbox}\n')
+          print('регіони:', ', '.join(r['cc'] for r in sel), '| рамка:', bbox or '—', '| початок:', since)
+          PY
+
+      - name: Реліз roads-latest є
+        if: steps.m.outputs.bbox == ''
+        run: |
+          gh release view "$TAG" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
+            || gh release create "$TAG" -R "$GITHUB_REPOSITORY" --latest=false --title "Дороги (постійна адреса)" \
+                 --notes "Дороги для GNSS Filter (Android) і GNSS Nav (iOS). © OpenStreetMap contributors, ODbL."
+
+  build:
+    needs: setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix: ${{ fromJSON(needs.setup.outputs.matrix) }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REGION: ${{ toJSON(matrix) }}
+      CC: ${{ matrix.cc }}
+      BBOX: ${{ needs.setup.outputs.bbox }}
+      TRACK: ${{ github.event.inputs.track }}
+      TOL: ${{ github.event.inputs.tolerance }}
+      TILE: ${{ github.event.inputs.tile }}
     steps:
       - uses: actions/checkout@v5
 
-      - name: Де скрипти
-        id: where
-        run: |
-          B=$(find . -name build_roads.py -not -path "*/node_modules/*" | head -1)
-          V=$(find . -name verify_roads.py | head -1)
-          if [ -z "$B" ] || [ -z "$V" ]; then echo "::error::не знайдено build_roads.py / verify_roads.py у репозиторії"; find . -maxdepth 3 -type d | head -50; exit 1; fi
-          echo "build=$B" >> "$GITHUB_OUTPUT"; echo "verify=$V" >> "$GITHUB_OUTPUT"
-          echo "build_roads: $B"; echo "verify_roads: $V"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
 
       - name: Інструменти
         run: |
@@ -56,108 +157,47 @@ jobs:
 
       - name: Витяг OSM (Geofabrik)
         run: |
-          wget -q https://download.geofabrik.de/europe/ukraine-latest.osm.pbf
-          wget -q https://download.geofabrik.de/europe/ukraine-latest.osm.pbf.md5
-          md5sum -c ukraine-latest.osm.pbf.md5
-          ls -la ukraine-latest.osm.pbf
-          osmium fileinfo -e ukraine-latest.osm.pbf | grep -i -E "timestamp|Number of" || true
+          set -euo pipefail
+          url="https://download.geofabrik.de/${{ matrix.path }}-latest.osm.pbf"
+          name="$(basename "$url")"
+          curl -fsSL --retry 5 --retry-delay 20 -o "$name.md5" "$url.md5"
+          curl -fsSL --retry 5 --retry-delay 20 -o "$name" "$url"
+          md5sum -c "$name.md5"
+          ls -la "$name"
+          echo "SRC=$name" >> "$GITHUB_ENV"
 
-      - name: Лише дороги
+      - name: Збирання й перевірка
         run: |
-          osmium tags-filter ukraine-latest.osm.pbf w/highway -o ukraine-roads.osm.pbf
-          ls -la ukraine-roads.osm.pbf
+          set -euo pipefail
+          python3 tools/roads/build_region.py --region "$REGION" --src "$SRC" --bbox "$BBOX" \
+            --track "${TRACK:-true}" --tolerance "${TOL:-2}" --tile "${TILE:-0.025}" --warn-mb "$WARN_MB"
+          rm -f "$SRC" roads-src.osm.pbf extras-src.osm.pbf
+          ls -la ./*.bin
 
-      - name: Доповнення (обмеження швидкості, камери, переїзди, лежачі) — для GNSS Nav iOS
-        # окремий файл: ua-roads.bin не змінюється; Android, якому доповнення не потрібні, їх просто не завантажує.
-        # Камери часто — окремі точки поза дорогою, тому фільтр ширший за w/highway.
-        run: |
-          set -eo pipefail                                # перевірка впала — крок теж (verify | tee)
-          E=$(dirname "${{ steps.where.outputs.build }}")/build_extras.py
-          VE=$(dirname "${{ steps.where.outputs.verify }}")/verify_extras.py
-          osmium tags-filter ukraine-latest.osm.pbf w/highway n/highway=speed_camera n/enforcement r/enforcement \
-            n/railway=level_crossing n/traffic_calming -o extras-src.osm.pbf
-          if [ -n "${{ github.event.inputs.bbox }}" ]; then
-            python3 "$E" extras-src.osm.pbf region-extras.bin --bbox "${{ github.event.inputs.bbox }}"
-            python3 "$VE" region-extras.bin | tee region-extras.txt
-            python3 "$E" extras-src.osm.pbf region-extras2.bin --format 2 --bbox "${{ github.event.inputs.bbox }}"
-            python3 "$VE" region-extras2.bin | tee region-extras2.txt
-          else
-            python3 "$E" extras-src.osm.pbf ua-extras.bin
-            python3 "$VE" ua-extras.bin | tee ua-extras.txt
-            # UAREX002 — з напрямком камер (GNSS Nav iOS 0.9.3+); UAREX001 лишається для старих застосунків
-            python3 "$E" extras-src.osm.pbf ua-extras2.bin --format 2
-            python3 "$VE" ua-extras2.bin | tee ua-extras2.txt
-            python3 "$E" extras-src.osm.pbf kyiv-extras.bin --bbox 49.3,29.2,51.6,32.2
-            python3 "$VE" kyiv-extras.bin | tee kyiv-extras.txt
-          fi
-
-      - name: Контейнер
-        env:
-          BBOX: ${{ github.event.inputs.bbox }}
-          TRACK: ${{ github.event.inputs.track }}
-          TOL: ${{ github.event.inputs.tolerance }}
-          TILE: ${{ github.event.inputs.tile }}
-        run: |
-          set -e
-          B="${{ steps.where.outputs.build }}"; V="${{ steps.where.outputs.verify }}"
-          ARGS="--tolerance ${TOL:-2} --tile ${TILE:-0.025}"
-          if [ "${TRACK}" = "false" ]; then ARGS="$ARGS --no-track"; fi
-          if [ -n "${BBOX}" ]; then
-            python3 "$B" ukraine-roads.osm.pbf region-roads.bin $ARGS --bbox "${BBOX}"
-            python3 "$V" region-roads.bin | tee region-roads.txt
-          else
-            python3 "$B" ukraine-roads.osm.pbf ua-roads.bin $ARGS
-            python3 "$V" ua-roads.bin | tee ua-roads.txt
-            python3 "$B" ukraine-roads.osm.pbf kyiv-roads.bin $ARGS --bbox 49.3,29.2,51.6,32.2
-            python3 "$V" kyiv-roads.bin | tee kyiv-roads.txt
-          fi
-          ls -la *.bin
+      - name: Artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: road-tiles-${{ matrix.cc }}
+          path: |
+            *.bin
+            *.txt
+          if-no-files-found: ignore
+          retention-days: 30
 
       - name: Дата
         id: d
         run: echo "d=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
 
-      - name: Маніфест для GNSS Nav iOS (розміри й SHA-256)
-        # лише для повної України; Android його не читає
-        if: ${{ github.event.inputs.bbox == '' || github.event.inputs.bbox == null }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          python3 - <<'PY'
-          # Маніфест доповнюється, а не перезаписується: Україну оновлює roads.yml, Ізраїль — roads-il.yml.
-          import hashlib, json, os, datetime, subprocess
-          def ref(f):
-              return {'file': f, 'size': os.path.getsize(f), 'sha256': hashlib.sha256(open(f, 'rb').read()).hexdigest()}
-          old = {'regions': []}
-          if subprocess.run(['gh', 'release', 'download', 'roads-latest', '-p', 'manifest.json', '-O', 'manifest-old.json', '--clobber']).returncode == 0:
-              try: old = json.load(open('manifest-old.json', encoding='utf-8'))
-              except Exception: pass
-          mine = {'id': 'UA', 'name': 'Уся Україна', 'bbox': [22.1, 44.3, 40.3, 52.4], 'files': [ref('ua-roads.bin'), ref('ua-extras.bin'), ref('ua-extras2.bin')]}
-          regs = [r for r in old.get('regions', []) if r['id'] != mine['id']] + [mine]
-          m = {'schema': 1, 'module': 'roads',
-               'generated': datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
-               'license': 'ODbL 1.0 — © OpenStreetMap contributors', 'regions': sorted(regs, key=lambda r: r['id'])}
-          json.dump(m, open('manifest.json', 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
-          print(json.dumps(m, ensure_ascii=False)[:500])
-          PY
-
-      - name: Artifacts
-        uses: actions/upload-artifact@v7
-        with:
-          name: road-tiles
-          path: |
-            *.bin
-            *.txt
-          retention-days: 30
-
-      - name: Release
+      - name: Датований реліз (Україна)
         # рамка (bbox) — як prerelease: «latest» його не бере, і застосунок далі тягне повну карту.
         # make_latest — явно: у репозиторії є й інші щомісячні релізи (мапи, маршрути для iOS), і без
         # цього GitHub робив «Latest» один із них — releases/latest/download/ua-roads.bin давав 404.
+        if: matrix.dated
         uses: softprops/action-gh-release@v2
         with:
-          make_latest: ${{ (github.event.inputs.bbox == '' || github.event.inputs.bbox == null) && 'true' || 'false' }}
-          prerelease: ${{ github.event.inputs.bbox != '' && github.event.inputs.bbox != null }}
+          make_latest: ${{ needs.setup.outputs.bbox == '' && 'true' || 'false' }}
+          prerelease: ${{ needs.setup.outputs.bbox != '' }}
           tag_name: roads-${{ steps.d.outputs.d }}-${{ github.run_number }}
           name: Дороги OSM для прив'язки, ${{ steps.d.outputs.d }}
           body: |
@@ -168,33 +208,61 @@ jobs:
             *.txt
 
       - name: Постійна адреса roads-latest
-        # Застосунок (11.4.2+) качає з releases/download/roads-latest/ua-roads.bin — ця адреса не
-        # залежить від того, який реліз GitHub вважає «Latest». Лише повна Україна (без рамки).
-        if: ${{ github.event.inputs.bbox == '' || github.event.inputs.bbox == null }}
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: roads-latest
-          name: Дороги OSM для прив'язки — поточні (roads-latest)
-          make_latest: 'false'
-          overwrite_files: true
-          body: |
-            Завжди найсвіжіша схема доріг (оновлюється щомісяця). Дані © OpenStreetMap contributors,
-            ODbL 1.0 (див. LICENSE-DATA). Джерело — Geofabrik ukraine-latest. Формат — tools/roads/FORMAT.md.
-          files: |
-            ua-roads.bin
-            ua-roads.txt
-            kyiv-roads.bin
-            kyiv-roads.txt
-            ua-extras.bin
-            ua-extras.txt
-            ua-extras2.bin
-            ua-extras2.txt
-            kyiv-extras.bin
-            kyiv-extras.txt
+        # Застосунок (11.4.2+) качає з releases/download/roads-latest/<cc>-roads.bin. Лише без рамки; лише те, що пройшло перевірку.
+        if: needs.setup.outputs.bbox == ''
+        run: |
+          set -euo pipefail
+          [ -s publish.txt ] || { echo "::error::немає publish.txt"; exit 1; }
+          cat publish.txt
+          xargs -a publish.txt gh release upload "$TAG" -R "$GITHUB_REPOSITORY" --clobber
+          echo "### $CC: у $TAG — $(grep -c '\.bin$' publish.txt) файл(и)" >> "$GITHUB_STEP_SUMMARY"
+          grep '\.bin$' publish.txt | while read -r f; do echo "- $f — $(du -m "$f" | cut -f1) МБ" >> "$GITHUB_STEP_SUMMARY"; done
 
-      - name: Маніфест roads-latest — після файлів
-        # 0.9.7 (iOS): маніфест окремо й ПІСЛЯ файлів — телефон не бачить нового маніфесту зі старим файлом чи 404
-        if: ${{ github.event.inputs.bbox == '' || github.event.inputs.bbox == null }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh release upload roads-latest manifest.json --clobber --repo "${{ github.repository }}"
+  index:
+    # Після ВСІХ регіонів (і вдалих, і ні), лише без рамки: списки мап — окремо й після файлів (телефон не бачить нового списку
+    # зі старим файлом чи 404).
+    needs: [setup, build]
+    if: always() && needs.setup.result == 'success' && needs.setup.outputs.bbox == ''
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SINCE: ${{ needs.setup.outputs.since }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: roads-index.json (Android) і manifest.json (iOS)
+        run: |
+          set -uo pipefail
+          printf '%s' "$REGIONS" > regions.json
+          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" > release.json || exit 1
+          has() { python3 -c "import json,sys;sys.exit(0 if any(a['name']==sys.argv[1] for a in json.load(open('release.json'))['assets']) else 1)" "$1"; }
+          mkdir -p hdr old
+          # старі списки: є в релізі, але не завантажились — зупинитись (інакше manifest.json втратить регіон, який не перезбирався)
+          for f in roads-index.json manifest.json; do
+            if has "$f"; then
+              gh release download "$TAG" -R "$GITHUB_REPOSITORY" -p "$f" -D old --clobber \
+                || { echo "::error::$f є в релізі, але не завантажився"; exit 1; }
+            fi
+          done
+          for n in $(python3 -c "import json;print(' '.join(a['name'] for a in json.load(open('release.json'))['assets'] if a['name'].endswith('-roads.bin')))"); do
+            # лише заголовок (32 байти): ua-roads.bin — 125 МБ, качати його цілим не треба
+            curl -fsSL -r 0-31 "https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/$n" 2>/dev/null | head -c 32 > "hdr/$n.hdr"
+            [ "$(stat -c %s "hdr/$n.hdr")" = 32 ] || echo "::warning::$n — заголовок не прочитано"
+          done
+
+          python3 tools/roads/roads_index.py merge --assets release.json --headers hdr --regions regions.json \
+            --old old/roads-index.json --out roads-index.json || exit 1
+          gh release upload "$TAG" -R "$GITHUB_REPOSITORY" roads-index.json --clobber || exit 1
+          { echo '### roads-index.json (Android)'; echo '```json'; cat roads-index.json; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+          python3 tools/roads/roads_index.py ios --assets release.json --regions regions.json --old old/manifest.json \
+            --since "$SINCE" --repo "$GITHUB_REPOSITORY" --tag "$TAG" --out manifest.json
+          rc=$?
+          if [ $rc -eq 0 ]; then
+            gh release upload "$TAG" -R "$GITHUB_REPOSITORY" manifest.json --clobber || exit 1
+            { echo '### manifest.json (iOS) — оновлено'; echo '```json'; cat manifest.json; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          elif [ $rc -eq 10 ]; then
+            echo '### manifest.json (iOS) — без змін (UA / IL у цьому запуску не перезбирались)' >> "$GITHUB_STEP_SUMMARY"
+          else
+            exit 1
+          fi
