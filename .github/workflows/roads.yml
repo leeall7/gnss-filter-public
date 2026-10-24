@@ -10,11 +10,12 @@
 # Що робить (кожен регіон — окремий раннер, паралельно):
 #  1) витяг Geofabrik + md5 → osmium tags-filter → build_roads.py (0.025°, 2 м, track) → verify_roads.py → перевірка файлу
 #     (заголовок, ≥ 1 МБ, ≤ 600 МБ — межа застосунку, біля столиці є дорога). Понад 300 МБ — лише попередження, файл викладається.
-#     UA та IL — ще й доповнення для iOS (*-extras.bin, *-extras2.bin), UA — ще й kyiv-roads.bin / kyiv-extras.bin — як раніше;
+#     UA та IL — ще й доповнення для iOS (*-extras.bin, *-extras2.bin) — як раніше. Київщина з 23.10.2026 НЕ збирається (рішення
+#     людини); kyiv-roads.bin / kyiv-extras.bin лишаються в релізі як є (для 13.1.19 і тестових стендів), в roads-index.json їх немає;
 #  2) UA — датований реліз roads-ДАТА-N з «Latest» (на нього Android переходить, якщо roads-latest недоступний) — як раніше;
 #  3) усе придатне → постійний реліз roads-latest (--clobber); регіон, що не пройшов перевірку, не викладається зовсім;
 #  4) наприкінці, ПІСЛЯ всіх файлів, одним кроком (без гонок між workflow):
-#     - roads-index.json (Android) — усі *-roads.bin, що справді лежать у roads-latest;
+#     - roads-index.json (Android) — *-roads.bin регіонів із REGIONS, що справді лежать у roads-latest;
 #     - manifest.json (iOS) — той самий формат, лише регіони UA та IL; запис регіону змінюється, лише якщо його файли викладено
 #       в цьому запуску (запуск лише «lt» маніфест iOS не чіпає).
 #
@@ -63,15 +64,13 @@ env:
   WARN_MB: '300'
   # cc — ім'я файлу <cc>-roads.bin; path — шлях на download.geofabrik.de без «-latest.osm.pbf»; probe — точка в столиці, біля якої
   # мусить бути дорога; extras — доповнення для iOS; ios — запис у manifest.json (як було); dated — датований реліз «Latest»;
-  # parts — частини з того ж витягу (рамка); bbox_mode — регіон для тестової рамки.
+  # parts — частини з того ж витягу (рамка; зараз жодної); bbox_mode — регіон для тестової рамки.
   REGIONS: >-
     [
      {"cc":"ua","path":"europe/ukraine","probe":"50.4501,30.5234",
       "label":{"uk":"Уся Україна","en":"All of Ukraine","he":"כל אוקראינה"},
       "extras":true,"dated":true,"bbox_mode":true,
-      "ios":{"id":"UA","name":"Уся Україна","bbox":[22.1,44.3,40.3,52.4]},
-      "parts":[{"cc":"kyiv","bbox":"49.3,29.2,51.6,32.2","extras":true,
-                "label":{"uk":"Лише Київщина (для тестів)","en":"Kyiv region only (for tests)","he":"מחוז קייב בלבד (לבדיקות)"}}]},
+      "ios":{"id":"UA","name":"Уся Україна","bbox":[22.1,44.3,40.3,52.4]}},
      {"cc":"il","path":"asia/israel-and-palestine","probe":"32.0853,34.7818",
       "label":{"uk":"Ізраїль","en":"Israel","he":"ישראל"},
       "extras":true,
@@ -250,10 +249,16 @@ jobs:
             [ "$(stat -c %s "hdr/$n.hdr")" = 32 ] || echo "::warning::$n — заголовок не прочитано"
           done
 
-          python3 tools/roads/roads_index.py merge --assets release.json --headers hdr --regions regions.json \
-            --old old/roads-index.json --out roads-index.json || exit 1
-          gh release upload "$TAG" -R "$GITHUB_REPOSITORY" roads-index.json --clobber || exit 1
-          { echo '### roads-index.json (Android)'; echo '```json'; cat roads-index.json; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          # індекс не склався (заголовок країни не прочитано й старого запису немає) — у релізі лишається попередній; iOS-маніфест — однаково
+          idx_fail=0
+          if python3 tools/roads/roads_index.py merge --assets release.json --headers hdr --regions regions.json \
+               --old old/roads-index.json --out roads-index.json; then
+            gh release upload "$TAG" -R "$GITHUB_REPOSITORY" roads-index.json --clobber || exit 1
+            { echo '### roads-index.json (Android)'; echo '```json'; cat roads-index.json; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          else
+            idx_fail=1
+            echo "::error::roads-index.json не оновлено — у релізі лишається попередній"
+          fi
 
           python3 tools/roads/roads_index.py ios --assets release.json --regions regions.json --old old/manifest.json \
             --since "$SINCE" --repo "$GITHUB_REPOSITORY" --tag "$TAG" --out manifest.json
@@ -266,3 +271,4 @@ jobs:
           else
             exit 1
           fi
+          exit $idx_fail
