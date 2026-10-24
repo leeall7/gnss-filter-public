@@ -5,7 +5,8 @@
   check  — перевірити контейнер (заголовок UARDS001, ≥ 1 МБ, ≤ межі застосунку, біля --probe дорога ≤ 300 м):
            python3 roads_index.py check lt-roads.bin --probe 54.6872,25.2797
 
-  merge  — roads-index.json для GNSS Filter (Android): усі *-roads.bin, що СПРАВДІ лежать у релізі:
+  merge  — roads-index.json для GNSS Filter (Android): *-roads.bin регіонів із REGIONS, що СПРАВДІ лежать у релізі
+           (знятий з REGIONS файл у релізі лишається, але в індекс не потрапляє):
            python3 roads_index.py merge --assets release.json --headers hdr/ --regions regions.json \
                    [--old old-index.json] --out roads-index.json
 
@@ -146,13 +147,19 @@ def cmd_merge(a):
         if os.path.exists(hp):
             with open(hp, 'rb') as f:
                 hdr = parse_header(f.read(32))
+        base = known.get(name)
+        if base is None:      # знятий з REGIONS (напр. kyiv-roads.bin з 23.10.2026): файл лишається в релізі, але не в списку
+            print(f'{name} — немає в REGIONS, в індекс не беру')
+            continue
         if hdr is None:
-            print(f'увага: {name} — заголовок не прочитано, в індекс не беру', file=sys.stderr)
-            continue
-        base = known.get(name) or old.get(name)
-        if base is None:
-            print(f'увага: {name} — немає в REGIONS і в старому індексі, в індекс не беру', file=sys.stderr)
-            continue
+            # рецензія P2-4: тимчасовий збій читання заголовка не має прибирати країну зі списку на місяць — запис зі старого індексу,
+            # а якщо його немає — зупинитись (індекс не викладається, у релізі лишається попередній)
+            if name in old and old[name].get('bbox'):
+                print(f'увага: {name} — заголовок не прочитано, беру рамку зі старого індексу', file=sys.stderr)
+                hdr = (old[name]['bbox'], 0)
+            else:
+                print(f'ПОМИЛКА: {name} — заголовок не прочитано, а старого запису немає; індекс не записую', file=sys.stderr)
+                return 3
         e = {'name': name, 'cc': base.get('cc', ''), 'full': bool(base.get('full', True)), 'label': base.get('label', {}),
              'bytes': int(asset.get('size', 0)), 'bbox': hdr[0], 'built': (asset.get('updated_at') or '')[:10]}
         dg = asset.get('digest') or ''
