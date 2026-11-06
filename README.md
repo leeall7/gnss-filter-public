@@ -8,6 +8,18 @@ navigator (Google Maps, Waze, etc.) only a position it has verified. When GPS
 cannot be trusted, it keeps navigating by its own estimate instead of showing
 a fake location.
 
+Two modes, chosen at first launch:
+
+- **Service mode** — the verified position goes to Waze, Google Maps and other
+  navigators (needs Developer options).
+- **Navigator mode** — the app's own offline navigator for places without
+  internet: blackouts, frontline areas, dead zones. Nothing is substituted, so
+  it also works alongside taxi and delivery driver apps
+  ([section 3](#3-navigator-mode-offline)).
+
+- Install: **[Google Play](https://play.google.com/store/apps/details?id=com.gnssfilter)**
+- Requires an **ELM327 OBD2 adapter, Bluetooth Classic** (not BLE, not Wi-Fi) —
+  see [section 5](#5-obd2-adapter-required)
 - Android 10 or newer
 - Interface: English, Ukrainian and Hebrew
 - All processing happens on the phone. Location data is never sent anywhere.
@@ -18,11 +30,11 @@ a fake location.
 
 ## Contents
 
-1. [Join the test](#1-join-the-test)
-2. [First-time setup](#2-first-time-setup)
-3. [Everyday use](#3-everyday-use)
+1. [First-time setup](#1-first-time-setup)
+2. [Everyday use](#2-everyday-use)
+3. [Navigator mode (offline)](#3-navigator-mode-offline)
 4. [If the app was reinstalled](#4-if-the-app-was-reinstalled)
-5. [OBD2 adapter (recommended)](#5-obd2-adapter-recommended)
+5. [OBD2 adapter (required)](#5-obd2-adapter-required)
 6. [Car position on the map](#6-car-position-on-the-map)
 7. [Sending logs and feedback](#7-sending-logs-and-feedback)
 8. [Free trial and purchase](#8-free-trial-and-purchase)
@@ -30,30 +42,21 @@ a fake location.
 10. [Honest limits](#10-honest-limits)
 11. [Terms of distribution](#11-terms-of-distribution)
 
-## 1. Join the test
+## 1. First-time setup
 
-You need a Google account (Gmail), the same one you use in Google Play on the
-phone.
+On first launch the app asks **How will you use the app?**:
 
-1. Write to **gnssfilter@gmail.com** and send the Gmail
-   address you use on your phone. We add it to the tester list by hand, so it
-   may take a little while — no need to write twice.
-2. Once you get a reply confirming you're on the list, open this link **on
-   the phone**: **https://play.google.com/apps/testing/com.gnssfilter**
-   and tap **Become a tester**.
-3. Install the app from Google Play using the link on that page.
-4. Please keep the app installed for at least **14 days** and actually drive
-   with it. Google counts only testers who stay enrolled for the whole period,
-   and the test helps only if the app is really used.
+- **For trips with Waze, Google Maps etc.** — the service mode, described in
+  this section and the next one;
+- **Navigator (I am a taxi driver)** — the navigator mode: steps 1–3 below are
+  not needed, see [section 3](#3-navigator-mode-offline).
 
-Sending your address is not enough by itself — step 2 is what actually makes
-you a tester.
-
-## 2. First-time setup
+The mode can be changed later (**Change mode** on the main screen, or
+**⋯ → Change mode…** in the navigator).
 
 Android lets only one app provide a verified position to other apps, and you
 have to choose it yourself. This is an Android restriction, not a fault of the
-app.
+app. Steps 1–3 are for the service mode only.
 
 1. Open **Settings → About phone** and tap **Build number** 7 times. This
    enables Developer options. (On some phones: Settings → About phone →
@@ -71,14 +74,17 @@ app.
    - **Precise location** (required);
    - **Notifications** (the status stays visible while the app works in the
      background);
-   - **Nearby devices / Bluetooth** — only if you use an OBD2 adapter;
+   - **Nearby devices / Bluetooth** — for the OBD2 adapter;
    - **Display over other apps** — only if you turn on the coloured status dot.
 5. Tap **Start**.
 
 If step 2 is skipped, the app shows a red card **Mock location not allowed**
 with a button **Open Developer options**.
 
-## 3. Everyday use
+## 2. Everyday use
+
+This section is about the service mode; the navigator mode is described in
+[section 3](#3-navigator-mode-offline).
 
 Tap **Start** before driving and **Stop** when you finish. The app keeps
 working with the screen off or while the navigator is in the foreground; a
@@ -101,6 +107,59 @@ affected by the app.
 The **Diagnostics** section at the bottom shows technical details. You do not
 need it for normal use, but it helps when you report a problem.
 
+## 3. Navigator mode (offline)
+
+The navigator mode is the app's own navigator that works without internet:
+maps, routes and address search are on the phone — for blackouts, frontline
+areas and anywhere the network is gone. The position is the same verified one
+as in the service mode: under jamming the app keeps guiding by its own
+estimate. Developer options are not needed.
+
+GNSS Filter gives no mock location to anyone in this mode: the position is
+shown only on its own map. That is why it also works alongside taxi and
+delivery driver apps, which treat any mock location as spoofing and do not
+work together with the service mode.
+
+**Choosing the mode.** On first launch choose **Navigator (I am a taxi
+driver)**. To switch later: **⋯ → Change mode…** (also while driving).
+
+**Maps.** **⋯ → Maps and navigation** → country → region → **Download**. A
+region includes the map, routes and address search; files are tens to hundreds
+of megabytes. Off Wi-Fi the app asks first (**Mobile data** or **Wait for
+Wi-Fi**); the download continues in the background. After that the map, routes
+and search work without internet. New countries appear in the list without an
+app update.
+
+**Route.** Tap **🔍** and type an address, or long-press the map → **Route
+here**. Up to three routes are shown on the map; tap **Go**. While driving,
+**⇄ Routes** shows alternatives from where you are (**Keep current** keeps
+yours). If you leave the route, it is rebuilt by itself. A destination can be
+chosen before **Start**: the route is built as soon as there is a position.
+**⋯ → Cancel the route** ends guidance.
+
+**Places.** Search opens with **Home** and **Work**, favourites by category
+and **Recent**. Long-press a place → **Add to favorites** or **Set as home**.
+
+**Voice.** The speaker button switches **All** → **Choose** → **No
+announcements**; **⋯ → Announcements…** sets what **Choose** announces. The
+phone's own text-to-speech is used.
+
+**Road warnings.** When the road map of the country is on the phone
+(**⋯ → Details and settings → Roads**), the app also downloads road additions
+by itself and warns about speed cameras, speed limits, speed bumps and railway
+crossings; the speed limit is shown at the bottom of the map.
+
+**Addresses from other apps.** If a driver app lets you choose the navigator,
+choose GNSS Filter. Or share an address with it (**Share**): coordinates — the
+route is built at once; text — search opens with it. This works after the app
+has been opened once in the navigator mode.
+
+**Next to the driver app.** The split screen works: the arrow stays above the
+bottom panels. With another app in front, voice guidance continues.
+
+**Limits.** No traffic data. A route can be built only inside a downloaded
+region. In Hebrew the voice instructions are in English.
+
 ## 4. If the app was reinstalled
 
 The mock location app is selected **once**: Android keeps this choice when the
@@ -109,10 +168,9 @@ location app → GNSS Filter) only if the app was **uninstalled and installed
 again**, or its **data was cleared**. If the choice is lost, the app warns you
 with a red card, a notification **NOT WORKING** and a vibration.
 
-## 5. OBD2 adapter (recommended)
+## 5. OBD2 adapter (required)
 
-**The highest reliability under GPS interference is achieved only with a
-Bluetooth OBD2 adapter.** With it the app reads the real wheel speed from the
+**The app needs a Bluetooth OBD2 adapter.** With it the app reads the real wheel speed from the
 car, which a jammer cannot fake. While GPS is unavailable this is what keeps
 the estimated position accurate.
 
@@ -173,16 +231,21 @@ limited:
 
 - the point must be **within 5 km** of the position the app already knows. A
   point farther away is rejected, and there is no way to confirm it anyway;
-- right after **Start**, while the app has no GPS or network fix yet, there is
-  nothing to compare the point with, so it is not accepted. Wait for the first
-  fix and try again;
+- with no GPS, no network and no estimate of its own yet (for example right
+  after **Start** under jamming), there is nothing to compare the point with.
+  It is then accepted only as a **temporary** point, and only within the
+  downloaded road map. As soon as a real network fix disagrees with it by more
+  than 5 km, the app trusts the real fix instead;
 - while protection is stopped, the point is not accepted at all.
 
 In each case the app shows a message with the reason.
 
+In the navigator mode the same screen opens from **⋯ → Adjust position and
+heading**.
+
 ## 7. Sending logs and feedback
 
-Logs are the most useful thing a tester can send, especially after a trip
+Logs are the most useful thing you can send, especially after a trip
 where something looked wrong.
 
 1. Open **Diagnostics → Logs ↗**.
@@ -190,8 +253,10 @@ where something looked wrong.
 3. The archive is saved to **Downloads/GnssFilter** on the phone. Send that
    file to **gnssfilter@gmail.com**.
 
-**The archive contains exact coordinates, time and speed of your trips.** Send
-it only if you are comfortable sharing that, and only to the address above.
+**The archive contains exact coordinates, time and speed of your trips**; in
+the navigator mode also destinations, search queries, routes and addresses
+received from other apps. Send it only if you are comfortable sharing that,
+and only to the address above.
 The app never sends logs by itself.
 
 When reporting a problem, please add: phone model, Android version, the app
@@ -221,7 +286,7 @@ reinstalling the app.
 | OBD: "adapter not found among paired devices" | Pair the adapter in the phone's Bluetooth settings first, then choose it in the app |
 | OBD: "no data (ignition?)" | Turn the ignition on; some adapters respond only with the engine running |
 | The navigator shows a wrong place after Stop | Open GNSS Filter once — it removes any leftover mock location by itself — or restart the navigator |
-| A taxi or delivery driver app reports location spoofing | Press **Stop**. If it still complains, set Developer options → "Select mock location app" to "No app" (choose GNSS Filter again before the next drive). Such apps do not allow work while any mock location app is active (see section 10) |
+| A taxi or delivery driver app reports location spoofing | Use the navigator mode (section 3) — it gives no mock location. In the service mode press **Stop**. If it still complains, set Developer options → "Select mock location app" to "No app" (choose GNSS Filter again before the next drive). Such apps do not allow work while any mock location app is active (see section 10) |
 | The app is in the wrong language | Android 13+: Settings → Apps → GNSS Filter → Language |
 
 ## 10. Honest limits
@@ -232,13 +297,17 @@ by estimate and the error grows with time. Without an OBD2 adapter the app does
 not know the speed, so this estimate is only a short bridge between network
 fixes. This is physics, not a setting.
 
-**Taxi and delivery drivers.** Taxi and courier driver apps do not allow work
-while GNSS Filter is active. The app does not distort your position, it only
-refines it, but it passes the position to the navigator through the same
-system mechanism (mock location) that these services treat as location
-spoofing. Press **Stop** while working in such an app. If the driver app still
-complains, set Developer options → "Select mock location app" to "No app" and
-choose GNSS Filter again before your next drive.
+**Taxi and delivery drivers.** In the service mode taxi and courier driver
+apps do not allow work while GNSS Filter is active. The app does not distort
+your position, it only refines it, but it passes the position to the
+navigator through the same system mechanism (mock location) that these
+services treat as location spoofing. Use the navigator mode (section 3): it
+gives no mock location. If a driver app still complains, set Developer
+options → "Select mock location app" to "No app" (choose GNSS Filter there
+again only when you go back to the service mode).
+
+The navigator mode has no traffic data, and a route can be built only inside
+a downloaded region.
 
 ## 11. Terms of distribution
 
@@ -267,6 +336,18 @@ GNSS Filter захищає навігацію на Android, коли GPS глу�
 навігатору (Google Maps, Waze тощо) лише перевірену позицію. Коли GPS довіряти
 не можна, він веде далі за власним розрахунком, а не показує чуже місце.
 
+Два режими, обираються на першому запуску:
+
+- **Режим сервісу** — перевірена позиція йде у Waze, Google Maps та інші
+  навігатори (потрібне меню розробника).
+- **Режим навігатора** — власний офлайн-навігатор застосунку для місць без
+  інтернету: блекаут, прифронтові райони, зони без зв'язку. Нічого не
+  підміняється, тож він працює й поруч із застосунками водіїв таксі та доставки
+  ([розділ 3](#3-режим-навігатора-офлайн)).
+
+- Встановити: **[Google Play](https://play.google.com/store/apps/details?id=com.gnssfilter)**
+- Потрібен **OBD2-адаптер ELM327 Bluetooth Classic** (не BLE, не Wi-Fi) —
+  див. [розділ 5](#5-obd2-адаптер-обовязково)
 - Android 10 або новіший
 - Інтерфейс: українська, англійська та іврит
 - Уся обробка відбувається на телефоні. Дані про місцезнаходження нікуди не
@@ -277,11 +358,11 @@ GNSS Filter захищає навігацію на Android, коли GPS глу�
 
 ## Зміст
 
-1. [Як стати тестувальником](#1-як-стати-тестувальником)
-2. [Перше налаштування](#2-перше-налаштування)
-3. [Щоденне користування](#3-щоденне-користування)
+1. [Перше налаштування](#1-перше-налаштування)
+2. [Щоденне користування](#2-щоденне-користування)
+3. [Режим навігатора (офлайн)](#3-режим-навігатора-офлайн)
 4. [Якщо застосунок перевстановили](#4-якщо-застосунок-перевстановили)
-5. [OBD2-адаптер (бажано)](#5-obd2-адаптер-бажано)
+5. [OBD2-адаптер (обов'язково)](#5-obd2-адаптер-обовязково)
 6. [Позиція авто на карті](#6-позиція-авто-на-карті)
 7. [Логи та зворотний зв'язок](#7-логи-та-зворотний-звязок)
 8. [Пробний період і покупка](#8-пробний-період-і-покупка)
@@ -289,28 +370,21 @@ GNSS Filter захищає навігацію на Android, коли GPS глу�
 10. [Чесно про межі](#10-чесно-про-межі)
 11. [Умови розповсюдження](#11-умови-розповсюдження)
 
-## 1. Як стати тестувальником
+## 1. Перше налаштування
 
-Потрібен обліковий запис Google (Gmail), той самий, що в Google Play на
-телефоні.
+На першому запуску застосунок питає **Як будете користуватись?**:
 
-1. Напишіть на **gnssfilter@gmail.com** і надішліть Gmail-адресу,
-   яку використовуєте на телефоні. Ми додаємо адреси до списку вручну, тож це
-   може зайняти трохи часу — писати вдруге не треба.
-2. Коли отримаєте підтвердження, що вас додано, відкрийте на телефоні:
-   **https://play.google.com/apps/testing/com.gnssfilter**
-   і натисніть **Стати тестувальником**.
-3. Встановіть застосунок із Google Play за посиланням на тій сторінці.
-4. Будь ласка, не видаляйте застосунок щонайменше **14 днів** і справді їздіть
-   із ним. Google зараховує лише тих, хто лишається в тесті весь цей час, а
-   користь від тесту є тільки тоді, коли застосунком користуються.
+- **Для поїздок через Waze, Google Maps тощо** — режим сервісу, про нього цей
+  і наступний розділи;
+- **Навігатор (я водій таксі)** — режим навігатора: кроки 1–3 нижче не
+  потрібні, див. [розділ 3](#3-режим-навігатора-офлайн).
 
-Самого надсилання адреси недостатньо — тестувальником вас робить саме крок 2.
-
-## 2. Перше налаштування
+Режим можна змінити пізніше (**Змінити режим** на головному екрані або
+**⋯ → Змінити режим…** у навігаторі).
 
 Android дозволяє лише одному застосунку передавати перевірену позицію іншим, і
-обрати його маєте ви самі. Це обмеження Android, а не вада застосунку.
+обрати його маєте ви самі. Це обмеження Android, а не вада застосунку. Кроки
+1–3 — лише для режиму сервісу.
 
 1. Відкрийте **Налаштування → Про телефон** і 7 разів торкніться **Номер
    збірки**. Це вмикає меню розробника. (На деяких телефонах: Налаштування →
@@ -327,7 +401,7 @@ Android дозволяє лише одному застосунку переда
 4. Відкрийте GNSS Filter і дозвольте:
    - **точне місцезнаходження** (обов'язково);
    - **сповіщення** (стан видно, поки застосунок працює у фоні);
-   - **пристрої поблизу / Bluetooth** — лише якщо користуєтесь OBD2-адаптером;
+   - **пристрої поблизу / Bluetooth** — для OBD2-адаптера;
    - **показ поверх інших застосунків** — лише якщо вмикаєте кольорову крапку
      стану.
 5. Натисніть **Старт**.
@@ -335,7 +409,10 @@ Android дозволяє лише одному застосунку переда
 Якщо пропустити крок 2, застосунок покаже червону картку **Мок-локацію не
 дозволено** з кнопкою **Відкрити меню розробника**.
 
-## 3. Щоденне користування
+## 2. Щоденне користування
+
+Цей розділ — про режим сервісу; режим навігатора описано в
+[розділі 3](#3-режим-навігатора-офлайн).
 
 Натисніть **Старт** перед поїздкою і **Стоп** після неї. Застосунок працює з
 вимкненим екраном і тоді, коли на екрані навігатор; поточний стан видно у
@@ -357,6 +434,59 @@ Android дозволяє лише одному застосунку переда
 Розділ **Діагностика** внизу екрана показує технічні подробиці. Для звичайного
 користування він не потрібен, але допомагає, коли повідомляєте про проблему.
 
+## 3. Режим навігатора (офлайн)
+
+Режим навігатора — власний навігатор застосунку, що працює без інтернету:
+мапи, маршрути й пошук адрес — на телефоні. Для блекауту, прифронтових районів
+і будь-де, де зникла мережа. Позиція та сама перевірена, що й у режимі сервісу:
+під завадою застосунок веде далі за власним розрахунком. Меню розробника не
+потрібне.
+
+У цьому режимі GNSS Filter нікому не видає фіктивну позицію: її видно лише на
+його власній мапі. Тому він працює й поруч із застосунками водіїв таксі та
+доставки — вони вважають будь-яке фіктивне місцезнаходження підміною й разом
+із режимом сервісу не працюють.
+
+**Вибір режиму.** На першому запуску оберіть **Навігатор (я водій таксі)**.
+Змінити пізніше: **⋯ → Змінити режим…** (і на ходу).
+
+**Мапи.** **⋯ → Мапи й навігація** → країна → регіон → **Завантажити**. Регіон
+містить мапу, маршрути й пошук адрес; файли — від десятків до сотень
+мегабайт. Не на Wi-Fi застосунок спершу питає (**Мобільними** чи **Чекати
+Wi-Fi**); завантаження йде у фоні. Далі мапа, маршрути й пошук працюють без
+інтернету. Нові країни з'являються в списку без оновлення застосунку.
+
+**Маршрут.** Натисніть **🔍** і введіть адресу або довго натисніть на мапі →
+**Маршрут сюди**. На мапі — до трьох маршрутів; натисніть **Поїхали**. Під час
+руху **⇄ Варіанти** показує інші маршрути від поточного місця (**Лишити
+поточний** — лишити свій). Зійшли з маршруту — він перебудується сам. Ціль
+можна обрати й до **Старт**: маршрут побудується, щойно з'явиться позиція.
+**⋯ → Скасувати маршрут** — припинити ведення.
+
+**Місця.** Пошук відкривається з **Дім** і **Робота**, улюбленими за
+категоріями й **Останні**. Довге натискання на місці → **До улюблених** або
+**Зробити домом**.
+
+**Голос.** Кнопка динаміка перемикає **Усі** → **Вибрати** → **Без
+оголошень**; **⋯ → Озвучування…** — що саме озвучувати в режимі **Вибрати**.
+Використовується системний синтез мовлення телефона.
+
+**Попередження на дорозі.** Коли на телефоні є схема доріг країни
+(**⋯ → Деталі й налаштування → Дороги**), застосунок сам завантажує
+доповнення й попереджає про камери, обмеження швидкості, лежачих поліцейських
+і залізничні переїзди; обмеження швидкості видно внизу мапи.
+
+**Адреса з інших застосунків.** Якщо застосунок водія дає вибрати навігатор —
+оберіть GNSS Filter. Або поділіться з ним адресою (**Поділитися**): координати
+— маршрут будується одразу; текст — відкривається пошук із ним. Працює після
+того, як застосунок один раз відкрили в режимі навігатора.
+
+**Поруч із застосунком водія.** Поділений екран працює: стрілка тримається над
+нижніми панелями. Коли поверх відкрито інший застосунок, голос веде далі.
+
+**Межі.** Заторів немає. Маршрут будується лише в межах завантаженого
+регіону. Івритом голосові підказки звучать англійською.
+
 ## 4. Якщо застосунок перевстановили
 
 Застосунок для фіктивного місцезнаходження обирається **один раз**: під час
@@ -366,10 +496,9 @@ Android дозволяє лише одному застосунку переда
 **очистили його дані**. Якщо вибір злетів, застосунок попередить червоною
 карткою, сповіщенням **НЕ ПРАЦЮЄ** і вібрацією.
 
-## 5. OBD2-адаптер (бажано)
+## 5. OBD2-адаптер (обов'язково)
 
-**Найвища достовірність під завадами GPS досягається лише з Bluetooth
-OBD2-адаптером.** З ним застосунок читає справжню швидкість коліс з
+**Застосунку потрібен Bluetooth OBD2-адаптер.** З ним застосунок читає справжню швидкість коліс з
 автомобіля, а її глушилка підробити не може. Саме це тримає точність
 розрахованої позиції, поки GPS недоступний.
 
@@ -430,16 +559,20 @@ OBD2-адаптером.** З ним застосунок читає справ�
 
 - точка має бути **в межах 5 км** від позиції, яку застосунок уже знає. Дальшу
   точку він відхилить, і підтвердити її «все одно» неможливо;
-- одразу після **Старту**, поки немає ні GPS-, ні мережевого фікса, звірити
-  точку нема з чим, тому вона не приймається. Дочекайтесь першого фікса й
-  спробуйте ще раз;
+- коли немає ні GPS, ні мережі, ні власного розрахунку (наприклад, одразу після
+  **Старту** під завадою), звірити точку нема з чим. Тоді вона приймається лише
+  як **тимчасова** і лише в межах завантаженої схеми доріг. Щойно справжній
+  мережевий фікс розійдеться з нею понад 5 км, застосунок довірятиме йому;
 - коли захист зупинено, точка не приймається взагалі.
 
 У кожному випадку застосунок показує повідомлення з причиною.
 
+У режимі навігатора той самий екран відкривається з **⋯ → Уточнити позицію й
+курс**.
+
 ## 7. Логи та зворотний зв'язок
 
-Логи — найкорисніше, що може надіслати тестувальник, особливо після поїздки,
+Логи — найкорисніше, що ви можете надіслати, особливо після поїздки,
 де щось виглядало не так.
 
 1. Відкрийте **Діагностика → Логи ↗**.
@@ -447,8 +580,10 @@ OBD2-адаптером.** З ним застосунок читає справ�
 3. Архів збережеться в **Downloads/GnssFilter** на телефоні. Надішліть цей
    файл на **gnssfilter@gmail.com**.
 
-**В архіві точні координати, час і швидкість ваших поїздок.** Надсилайте його,
-лише якщо готові цим поділитись, і лише на адресу вище. Сам застосунок логи
+**В архіві точні координати, час і швидкість ваших поїздок**; у режимі
+навігатора — ще й цілі, пошукові запити, маршрути й адреси, отримані від інших
+застосунків. Надсилайте його, лише якщо готові цим поділитись, і лише на адресу
+вище. Сам застосунок логи
 нікуди не надсилає.
 
 Повідомляючи про проблему, додайте: модель телефона, версію Android, версію
@@ -478,7 +613,7 @@ OBD2-адаптером.** З ним застосунок читає справ�
 | OBD: «адаптер не знайдено серед спарених» | Спершу спаруйте адаптер у налаштуваннях Bluetooth телефона, потім оберіть його в застосунку |
 | OBD: «без даних (запалювання?)» | Увімкніть запалювання; деякі адаптери відповідають лише із заведеним двигуном |
 | Після Стоп навігатор показує не те місце | Відкрийте GNSS Filter — він сам прибере залишки фіктивного місцезнаходження — або перезапустіть навігатор |
-| Застосунок водія таксі чи доставки повідомляє про підміну геолокації | Натисніть **Стоп**. Якщо скаржиться далі — у параметрах розробника для «Вибрати застосунок для фіктивних місцезнаходжень» оберіть «Немає» (перед наступною поїздкою знову оберіть GNSS Filter). Такі застосунки не дозволяють працювати, поки активний будь-який застосунок фіктивного місцезнаходження (див. розділ 10) |
+| Застосунок водія таксі чи доставки повідомляє про підміну геолокації | Користуйтеся режимом навігатора (розділ 3) — він не видає фіктивної позиції. У режимі сервісу натисніть **Стоп**. Якщо скаржиться далі — у параметрах розробника для «Вибрати застосунок для фіктивних місцезнаходжень» оберіть «Немає» (перед наступною поїздкою знову оберіть GNSS Filter). Такі застосунки не дозволяють працювати, поки активний будь-який застосунок фіктивного місцезнаходження (див. розділ 10) |
 | Застосунок не тією мовою | Android 13+: Налаштування → Застосунки → GNSS Filter → Мова |
 
 ## 10. Чесно про межі
@@ -489,13 +624,18 @@ OBD2-адаптером.** З ним застосунок читає справ�
 не знає швидкості, тож цей розрахунок — лише короткий місток між мережевими
 фіксами. Це фізика, а не налаштування.
 
-**Водіям таксі й доставки.** Застосунки для водіїв таксі й кур'єрів не
-дозволяють працювати, поки увімкнений GNSS Filter. Він не спотворює позицію, а
-лише уточнює її, але передає її навігатору тим самим системним механізмом
-(фіктивне місцезнаходження), який ці сервіси вважають підміною геолокації. На
-час роботи в такому застосунку натисніть **Стоп**. Якщо застосунок водія все
-одно скаржиться — у параметрах розробника для «Вибрати застосунок для фіктивних
-місцезнаходжень» оберіть «Немає», а перед наступною поїздкою знову GNSS Filter.
+**Водіям таксі й доставки.** У режимі сервісу застосунки для водіїв таксі й
+кур'єрів не дозволяють працювати, поки увімкнений GNSS Filter. Він не
+спотворює позицію, а лише уточнює її, але передає її навігатору тим самим
+системним механізмом (фіктивне місцезнаходження), який ці сервіси вважають
+підміною геолокації. Користуйтеся режимом навігатора (розділ 3): він не видає
+фіктивної позиції. Якщо застосунок водія все одно скаржиться — у параметрах
+розробника для «Вибрати застосунок для фіктивних місцезнаходжень» оберіть
+«Немає» (GNSS Filter там знову обирайте, лише коли повернетеся до режиму
+сервісу).
+
+У режимі навігатора немає заторів, а маршрут будується лише в межах
+завантаженого регіону.
 
 ## 11. Умови розповсюдження
 
@@ -525,6 +665,17 @@ GNSS Filter מגן על הניווט באנדרואיד כאשר ה-GPS משוב
 (Google Maps, ‏Waze וכו') רק מיקום שאומת. כאשר אי אפשר לסמוך על ה-GPS, היא
 ממשיכה לנווט לפי חישוב משלה במקום להציג מיקום כוזב.
 
+שני מצבים, שנבחרים בהפעלה הראשונה:
+
+- **מצב שירות** — המיקום המאומת עובר ל-Waze, ‏Google Maps ואפליקציות ניווט
+  אחרות (נדרשות אפשרויות למפתחים).
+- **מצב נווט** — הנווט הלא-מקוון של האפליקציה עצמה למקומות ללא אינטרנט:
+  הפסקות חשמל, אזורי גבול וקו חזית, אזורים ללא קליטה. שום דבר לא מוחלף, ולכן
+  הוא פועל גם לצד אפליקציות לנהגי מוניות ושליחויות ([סעיף 3](#3-מצב-נווט-לא-מקוון)).
+
+- התקנה: **[Google Play](https://play.google.com/store/apps/details?id=com.gnssfilter)**
+- נדרש **מתאם OBD2 מסוג ELM327 ב-Bluetooth Classic** (לא BLE, לא Wi-Fi) —
+  ראו [סעיף 5](#5-מתאם-obd2-חובה)
 - אנדרואיד 10 ומעלה
 - ממשק: אנגלית, אוקראינית ועברית
 - כל העיבוד מתבצע בטלפון. נתוני המיקום אינם נשלחים לשום מקום.
@@ -537,11 +688,11 @@ GNSS Filter מגן על הניווט באנדרואיד כאשר ה-GPS משוב
 
 ## תוכן
 
-1. [הצטרפות לבדיקה](#1-הצטרפות-לבדיקה)
-2. [הגדרה ראשונה](#2-הגדרה-ראשונה)
-3. [שימוש יומיומי](#3-שימוש-יומיומי)
+1. [הגדרה ראשונה](#1-הגדרה-ראשונה)
+2. [שימוש יומיומי](#2-שימוש-יומיומי)
+3. [מצב נווט (לא מקוון)](#3-מצב-נווט-לא-מקוון)
 4. [אם האפליקציה הותקנה מחדש](#4-אם-האפליקציה-הותקנה-מחדש)
-5. [מתאם OBD2 (מומלץ)](#5-מתאם-obd2-מומלץ)
+5. [מתאם OBD2 (חובה)](#5-מתאם-obd2-חובה)
 6. [מיקום הרכב על המפה](#6-מיקום-הרכב-על-המפה)
 7. [שליחת יומנים ומשוב](#7-שליחת-יומנים-ומשוב)
 8. [ניסיון חינם ורכישה](#8-ניסיון-חינם-ורכישה)
@@ -549,27 +700,21 @@ GNSS Filter מגן על הניווט באנדרואיד כאשר ה-GPS משוב
 10. [בכנות על המגבלות](#10-בכנות-על-המגבלות)
 11. [תנאי הפצה](#11-תנאי-הפצה)
 
-## 1. הצטרפות לבדיקה
+## 1. הגדרה ראשונה
 
-נדרש חשבון Google ‏(Gmail) — אותו חשבון שבו אתם משתמשים ב-Google Play בטלפון.
+בהפעלה הראשונה האפליקציה שואלת **איך תשתמשו באפליקציה?**:
 
-1. כתבו אל **gnssfilter@gmail.com** ושלחו את כתובת
-   ה-Gmail שבטלפון. אנחנו מוסיפים אותה לרשימת הבודקים ידנית, ולכן זה עשוי
-   לקחת מעט זמן — אין צורך לכתוב שוב.
-2. לאחר שתקבלו תשובה שאתם ברשימה, פתחו את הקישור הזה **בטלפון**:
-   **https://play.google.com/apps/testing/com.gnssfilter**
-   והקישו על **Become a tester** (הצטרפות כבודק).
-3. התקינו את האפליקציה מ-Google Play דרך הקישור שבאותו עמוד.
-4. אנא השאירו את האפליקציה מותקנת לפחות **14 יום** ונסעו איתה בפועל. Google
-   סופרת רק בודקים שנשארו רשומים לאורך כל התקופה, והבדיקה מועילה רק אם
-   משתמשים באפליקציה באמת.
+- **לנסיעות עם Waze, Google Maps וכו'** — מצב שירות, המתואר בסעיף הזה ובבא
+  אחריו;
+- **ניווט (אני נהג מונית)** — מצב נווט: שלבים 1–3 שלמטה אינם נדרשים, ראו
+  [סעיף 3](#3-מצב-נווט-לא-מקוון).
 
-שליחת הכתובת לבדה אינה מספיקה — שלב 2 הוא שהופך אתכם לבודקים בפועל.
-
-## 2. הגדרה ראשונה
+אפשר לשנות את המצב מאוחר יותר (**שינוי מצב** במסך הראשי, או **⋯ ← שינוי
+מצב…** בנווט).
 
 אנדרואיד מאפשרת רק לאפליקציה אחת לספק מיקום לאפליקציות אחרות בדרך זו, ואת
-הבחירה עושים בעצמכם. זו מגבלה של אנדרואיד, לא תקלה באפליקציה.
+הבחירה עושים בעצמכם. זו מגבלה של אנדרואיד, לא תקלה באפליקציה. שלבים 1–3 —
+למצב שירות בלבד.
 
 1. פתחו **הגדרות ← מידע על הטלפון** והקישו 7 פעמים על **מספר Build**. כך
    נפתחות האפשרויות למפתחים. (בחלק מהטלפונים: הגדרות ← מידע על הטלפון ← מידע
@@ -584,14 +729,16 @@ GNSS Filter מגן על הניווט באנדרואיד כאשר ה-GPS משוב
 4. פתחו את GNSS Filter ואשרו:
    - **מיקום מדויק** (חובה);
    - **התראות** (המצב נשאר גלוי כשהאפליקציה פועלת ברקע);
-   - **מכשירים בקרבת מקום / Bluetooth** — רק אם אתם משתמשים במתאם OBD2;
+   - **מכשירים בקרבת מקום / Bluetooth** — עבור מתאם ה-OBD2;
    - **הצגה מעל אפליקציות אחרות** — רק אם תפעילו את נקודת המצב הצבעונית.
 5. הקישו **הפעלה**.
 
 אם שלב 2 דולג, האפליקציה מציגה כרטיס אדום **מיקום מדומה אינו מורשה** עם כפתור
 **פתיחת אפשרויות למפתחים**.
 
-## 3. שימוש יומיומי
+## 2. שימוש יומיומי
+
+הסעיף הזה עוסק במצב שירות; מצב נווט מתואר ב[סעיף 3](#3-מצב-נווט-לא-מקוון).
 
 הקישו **הפעלה** לפני הנסיעה ו-**עצירה** בסיומה. האפליקציה ממשיכה לפעול כשהמסך
 כבוי או כשאפליקציית הניווט בחזית; התראה מציגה את המצב הנוכחי.
@@ -612,6 +759,55 @@ GNSS Filter מגן על הניווט באנדרואיד כאשר ה-GPS משוב
 אזור **אבחון** בתחתית מציג פרטים טכניים. אין בו צורך בשימוש רגיל, אבל הוא
 עוזר כשמדווחים על בעיה.
 
+## 3. מצב נווט (לא מקוון)
+
+מצב נווט הוא הנווט של האפליקציה עצמה, שפועל ללא אינטרנט: מפות, מסלולים
+וחיפוש כתובות נמצאים בטלפון — להפסקות חשמל, לאזורי קו חזית ולכל מקום שבו
+הרשת נעלמה. המיקום הוא אותו מיקום מאומת כמו במצב שירות: תחת שיבוש האפליקציה
+ממשיכה לנווט לפי חישוב משלה. אין צורך באפשרויות למפתחים.
+
+במצב הזה GNSS Filter אינה מספקת מיקום מדומה לאף אחד: המיקום מוצג רק במפה
+שלה. לכן הוא פועל גם לצד אפליקציות לנהגי מוניות ושליחויות, שמחשיבות כל מיקום
+מדומה כזיוף ואינן פועלות יחד עם מצב שירות.
+
+**בחירת המצב.** בהפעלה הראשונה בחרו **ניווט (אני נהג מונית)**. כדי להחליף
+מאוחר יותר: **⋯ ← שינוי מצב…** (גם בזמן נסיעה).
+
+**מפות.** **⋯ ← מפות וניווט** ← מדינה ← אזור ← **הורדה**. אזור כולל מפה,
+מסלולים וחיפוש כתובות; הקבצים — עשרות עד מאות מגה-בייטים. מחוץ ל-Wi-Fi
+האפליקציה שואלת קודם (**חבילת גלישה** או **להמתין ל-Wi-Fi**); ההורדה ממשיכה
+ברקע. לאחר מכן המפה, המסלולים והחיפוש פועלים ללא אינטרנט. מדינות חדשות
+מופיעות ברשימה ללא עדכון האפליקציה.
+
+**מסלול.** הקישו **🔍** והקלידו כתובת, או לחיצה ארוכה על המפה ← **מסלול
+לכאן**. עד שלושה מסלולים מוצגים במפה; הקישו **יוצאים**. בזמן הנסיעה **⇄
+מסלולים** מציג חלופות מהמקום הנוכחי (**להשאיר את הנוכחי** — להישאר במסלול
+שלכם). סטיתם מהמסלול — הוא מחושב מחדש מעצמו. אפשר לבחור יעד גם לפני
+**הפעלה**: המסלול יחושב ברגע שיהיה מיקום. **⋯ ← ביטול המסלול** מסיים את
+הניווט.
+
+**מקומות.** החיפוש נפתח עם **בית** ו**עבודה**, מועדפים לפי קטגוריות
+ו**אחרונים**. לחיצה ארוכה על מקום ← **הוספה למועדפים** או **הגדרה כבית**.
+
+**קול.** כפתור הרמקול מחליף **הכול** ← **בחירה** ← **ללא הודעות**;
+**⋯ ← הכרזות…** קובע מה מוכרז במצב **בחירה**. נעשה שימוש במנוע ההקראה של
+הטלפון.
+
+**אזהרות בדרך.** כשמפת הכבישים של המדינה נמצאת בטלפון (**⋯ ← פרטים והגדרות ←
+כבישים**), האפליקציה מורידה בעצמה גם תוספות לכבישים ומזהירה על מצלמות
+מהירות, מגבלות מהירות, פסי האטה ומפגשי מסילת ברזל; מגבלת המהירות מוצגת
+בתחתית המפה.
+
+**כתובות מאפליקציות אחרות.** אם אפליקציית הנהג מאפשרת לבחור נווט — בחרו
+GNSS Filter. או שתפו איתה כתובת (**שיתוף**): קואורדינטות — המסלול מחושב מיד;
+טקסט — החיפוש נפתח איתו. זה פועל לאחר שהאפליקציה נפתחה פעם אחת במצב נווט.
+
+**לצד אפליקציית הנהג.** מסך מפוצל עובד: החץ נשאר מעל הלוחות התחתונים. כשאפליקציה
+אחרת פתוחה מעליה, ההנחיה הקולית ממשיכה.
+
+**מגבלות.** אין נתוני תנועה. מסלול אפשר לחשב רק בתוך אזור שהורד. בעברית
+ההנחיות הקוליות נשמעות באנגלית.
+
 ## 4. אם האפליקציה הותקנה מחדש
 
 אפליקציית המיקום המדומה נבחרת **פעם אחת**: אנדרואיד שומרת את הבחירה כשהאפליקציה
@@ -620,9 +816,9 @@ GNSS Filter מגן על הניווט באנדרואיד כאשר ה-GPS משוב
 שלה נמחקו**. אם הבחירה אבדה, האפליקציה מזהירה בכרטיס אדום, בהתראה **לא פועל**
 וברטט.
 
-## 5. מתאם OBD2 (מומלץ)
+## 5. מתאם OBD2 (חובה)
 
-**האמינות הגבוהה ביותר בזמן הפרעות GPS מושגת רק עם מתאם OBD2 ב-Bluetooth.**
+**האפליקציה זקוקה למתאם OBD2 ב-Bluetooth.**
 באמצעותו האפליקציה קוראת מהרכב את מהירות הגלגלים האמיתית, שמשבש אינו יכול
 לזייף. כשה-GPS אינו זמין, זה מה ששומר על דיוק המיקום המחושב.
 
@@ -678,15 +874,19 @@ GNSS Filter מגן על הניווט באנדרואיד כאשר ה-GPS משוב
 
 - הנקודה חייבת להיות **בטווח 5 ק"מ** מהמיקום שהאפליקציה כבר מכירה. נקודה
   רחוקה יותר נדחית, ואין שום דרך לאשר אותה בכל זאת;
-- מיד לאחר **הפעלה**, כשלאפליקציה עדיין אין מיקום GPS או רשת, אין מול מה
-  להשוות את הנקודה, ולכן היא לא מתקבלת. המתינו למיקום הראשון ונסו שוב;
+- כשאין GPS, אין רשת ואין עדיין חישוב משלה (למשל מיד לאחר **הפעלה** תחת
+  שיבוש), אין מול מה להשוות את הנקודה. אז היא מתקבלת רק כנקודה **זמנית**, ורק
+  בתחום מפת הכבישים שהורדה. ברגע שמיקום רשת אמיתי סותר אותה ביותר מ-5 ק"מ,
+  האפליקציה סומכת עליו;
 - כשההגנה עצורה, הנקודה לא מתקבלת כלל.
 
 בכל מקרה האפליקציה מציגה הודעה עם הסיבה.
 
+במצב נווט אותו מסך נפתח מ-**⋯ ← דיוק מיקום וכיוון**.
+
 ## 7. שליחת יומנים ומשוב
 
-יומנים הם הדבר השימושי ביותר שבודק יכול לשלוח, במיוחד אחרי נסיעה שבה משהו
+יומנים הם הדבר השימושי ביותר שאפשר לשלוח, במיוחד אחרי נסיעה שבה משהו
 נראה לא תקין.
 
 1. פתחו **אבחון ← יומנים ↗**.
@@ -694,7 +894,8 @@ GNSS Filter מגן על הניווט באנדרואיד כאשר ה-GPS משוב
 3. הארכיון נשמר בטלפון בתיקייה **Downloads/GnssFilter**. שלחו את הקובץ אל
    **gnssfilter@gmail.com**.
 
-**הארכיון מכיל קואורדינטות מדויקות, זמן ומהירות של הנסיעות שלכם.** שלחו אותו
+**הארכיון מכיל קואורדינטות מדויקות, זמן ומהירות של הנסיעות שלכם**; במצב נווט
+גם יעדים, שאילתות חיפוש, מסלולים וכתובות שהתקבלו מאפליקציות אחרות. שלחו אותו
 רק אם נוח לכם לשתף זאת, ורק לכתובת שלמעלה. האפליקציה אף פעם לא שולחת יומנים
 בעצמה.
 
@@ -722,7 +923,7 @@ Play, ללא מנוי. הרכישה קשורה לחשבון Google שלכם ונ
 | OBD: "המתאם לא נמצא בין המכשירים המצומדים" | צמדו קודם את המתאם בהגדרות ה-Bluetooth של הטלפון, ואז בחרו אותו באפליקציה |
 | OBD: "אין נתונים (הצתה?)" | הפעילו את ההצתה; חלק מהמתאמים עונים רק כשהמנוע פועל |
 | אפליקציית הניווט מציגה מקום שגוי אחרי עצירה | פתחו את GNSS Filter פעם אחת — היא מסירה בעצמה כל שארית של מיקום מדומה — או הפעילו מחדש את אפליקציית הניווט |
-| אפליקציית נהגי מונית או שליחויות מדווחת על זיוף מיקום | לחצו **עצירה**. אם היא עדיין מתלוננת, קבעו באפשרויות למפתחים ← "בחירת אפליקציה למיקום מדומה" את "אין אפליקציה" (ובחרו שוב GNSS Filter לפני הנסיעה הבאה). אפליקציות כאלה אינן מאפשרות לעבוד כל עוד אפליקציית מיקום מדומה כלשהי פעילה (ראו סעיף 10) |
+| אפליקציית נהגי מונית או שליחויות מדווחת על זיוף מיקום | השתמשו במצב נווט (סעיף 3) — הוא אינו מספק מיקום מדומה. במצב שירות לחצו **עצירה**. אם היא עדיין מתלוננת, קבעו באפשרויות למפתחים ← "בחירת אפליקציה למיקום מדומה" את "אין אפליקציה" (ובחרו שוב GNSS Filter לפני הנסיעה הבאה). אפליקציות כאלה אינן מאפשרות לעבוד כל עוד אפליקציית מיקום מדומה כלשהי פעילה (ראו סעיף 10) |
 | האפליקציה בשפה הלא נכונה | אנדרואיד 13 ומעלה: הגדרות ← אפליקציות ← GNSS Filter ← שפה |
 
 ## 10. בכנות על המגבלות
@@ -732,13 +933,15 @@ Play, ללא מנוי. הרכישה קשורה לחשבון Google שלכם ונ
 הערכה, והשגיאה גדלה עם הזמן. בלי מתאם OBD2 האפליקציה לא יודעת את המהירות,
 ולכן ההערכה הזו היא רק גשר קצר בין מיקומי רשת. זו פיזיקה, לא הגדרה.
 
-**נהגי מוניות ושליחויות.** אפליקציות לנהגי מוניות ושליחים אינן מאפשרות לעבוד
-כל עוד GNSS Filter פעיל. האפליקציה לא מעוותת את המיקום שלכם, אלא רק מדייקת
-אותו, אבל היא מעבירה את המיקום לאפליקציית הניווט דרך אותו מנגנון מערכת (מיקום
-מדומה) שהשירותים האלה מחשיבים כזיוף מיקום. לחצו **עצירה** בזמן העבודה
-באפליקציה כזו. אם אפליקציית הנהג עדיין מתלוננת, קבעו באפשרויות למפתחים ←
-"בחירת אפליקציה למיקום מדומה" את "אין אפליקציה", ובחרו שוב GNSS Filter לפני
-הנסיעה הבאה.
+**נהגי מוניות ושליחויות.** במצב שירות אפליקציות לנהגי מוניות ושליחים אינן
+מאפשרות לעבוד כל עוד GNSS Filter פעיל. האפליקציה לא מעוותת את המיקום שלכם,
+אלא רק מדייקת אותו, אבל היא מעבירה את המיקום לאפליקציית הניווט דרך אותו מנגנון
+מערכת (מיקום מדומה) שהשירותים האלה מחשיבים כזיוף מיקום. השתמשו במצב נווט
+(סעיף 3): הוא אינו מספק מיקום מדומה. אם אפליקציית הנהג עדיין מתלוננת, קבעו
+באפשרויות למפתחים ← "בחירת אפליקציה למיקום מדומה" את "אין אפליקציה" (ובחרו
+שם שוב GNSS Filter רק כשתחזרו למצב שירות).
+
+במצב נווט אין נתוני תנועה, ומסלול אפשר לחשב רק בתוך אזור שהורד.
 
 ## 11. תנאי הפצה
 
@@ -772,12 +975,12 @@ Play, ללא מנוי. הרכישה קשורה לחשבון Google שלכם ונ
 ## Licenses / Ліцензії / רישיונות
 
 - Data derived from OpenStreetMap and published in this repository's Releases — road network
-  files (`ua-roads.bin`, `kyiv-roads.bin`, `il-roads.bin`), road extras (`*-extras.bin`), map
+  files (`*-roads.bin`), road extras (`*-extras*.bin`), map
   tiles (`map-*.pmtiles`), routing and search data (`*.sqlite`): © OpenStreetMap contributors,
   [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/). See [LICENSE-DATA](LICENSE-DATA).
   Road network format: [tools/roads/FORMAT.md](tools/roads/FORMAT.md).
-- Дані на основі OpenStreetMap у Releases (схема доріг `ua-roads.bin`, `kyiv-roads.bin`,
-  `il-roads.bin`, доповнення `*-extras.bin`, тайли мап `map-*.pmtiles`, дані маршрутів і пошуку
+- Дані на основі OpenStreetMap у Releases (схема доріг `*-roads.bin`, доповнення
+  `*-extras*.bin`, тайли мап `map-*.pmtiles`, дані маршрутів і пошуку
   `*.sqlite`): © учасники OpenStreetMap, [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/).
   Див. [LICENSE-DATA](LICENSE-DATA).
 - נתונים המבוססים על OpenStreetMap ב-Releases (מפות כבישים, תוספות, אריחי מפה, נתוני ניתוב וחיפוש):
