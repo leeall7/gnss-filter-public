@@ -217,6 +217,27 @@ def info(nm):
     return NAME_INFO.get(nm, ('', ''))
 
 
+# Старі назви (перейменування): шукаються, а в окремій таблиці oldname — для позначки «колишня: …» у новіших застосунках.
+# Сумісність зі старими застосунками (Android 14.x, iOS 1.0): схема item / fts і формат gnss-search-1 — без змін; старі назви
+# лише дописуються до alt (і старий застосунок знаходить вулицю за старою назвою, показуючи чинну); нова таблиця — окремо.
+# Ключі з датами (old_name:1960-1991) не беремо.
+def old_keys():
+    return tuple(dict.fromkeys(('old_name', 'old_name:' + LANG, 'old_name:uk', 'old_name:ru', 'old_name:en')))
+
+
+def old_names(tags, nm):
+    """Старі назви об'єкта: значення через «;» розділені; без збігу з чинною назвою (без огляду на регістр)."""
+    out = []
+    cur = (nm or '').casefold()
+    for k in old_keys():
+        v = tags.get(k)
+        if not v: continue
+        for s in v.split(';'):
+            s = s.strip()
+            if s and s.casefold() != cur and s not in out: out.append(s)
+    return out
+
+
 def build_search(pbf, out):
     import osmium
     places, streets, addrs, pois = [], {}, [], []
@@ -236,7 +257,7 @@ def build_search(pbf, out):
             if nm and t.get('place') in PLACE_RANK:
                 pop = t.get('population', '').replace(' ', '')
                 bonus = int(min(20, 4 * math.log10(int(pop)))) if pop.isdigit() and int(pop) > 0 else 0
-                places.append((nm, t.get('place'), la, lo, PLACE_RANK[t.get('place')] + bonus))
+                places.append((nm, t.get('place'), la, lo, PLACE_RANK[t.get('place')] + bonus, old_names(t, nm)))
             # заклад з власною адресою — і заклад, і адреса
             if nm and any(k in t for k in POI_KEYS):
                 pois.append((nm, poi_kind(t), la, lo, own_addr(t)))
@@ -251,7 +272,7 @@ def build_search(pbf, out):
                 if c:
                     n = len(w.nodes)
                     key = nm
-                    streets.setdefault(key, []).append((c[0], c[1], n))
+                    streets.setdefault(key, []).append((c[0], c[1], n, old_names(t, nm)))
                 return
             is_poi = nm and any(k in t for k in POI_KEYS)
             has_addr = t.get('addr:housenumber') and t.get('addr:street')
@@ -289,18 +310,28 @@ def build_search(pbf, out):
       CREATE VIRTUAL TABLE fts USING fts4(name, extra, alt, tokenize=unicode61);
     """)
     rows = []
-    for nm, pl, la, lo, rk in places:
+    olds_of = {}           # індекс у rows → старі назви (лише для записів, де вони є)
+    street_old = {}        # (назва вулиці, населений пункт) → старі назви з усіх її частин у цьому пункті
+    for nm, pl, la, lo, rk, olds in places:
+        if olds: olds_of[len(rows)] = olds
         rows.append((KIND_PLACE if pl in ('city', 'town') else KIND_VILLAGE, nm, '', la, lo, rk))
     # вулиці: однакова назва в різних населених пунктах — окремі записи; в одному — одна (найдовша частина)
     for nm, parts in streets.items():
         by_place = {}
-        for la, lo, n in parts:
+        for la, lo, n, olds in parts:
             pl = nearest_place(la, lo)
             if pl not in by_place or by_place[pl][2] < n: by_place[pl] = (la, lo, n)
+            if olds:
+                acc = street_old.setdefault((nm, pl), [])
+                acc += [o for o in olds if o not in acc]
         for pl, (la, lo, n) in by_place.items():
+            if (nm, pl) in street_old: olds_of[len(rows)] = street_old[(nm, pl)]
             rows.append((KIND_STREET, nm, pl, la, lo, 30))
     for st, hn, city, la, lo in addrs:
-        rows.append((KIND_ADDR, f'{st}, {hn}', city or nearest_place(la, lo), la, lo, 10))
+        pl = nearest_place(la, lo)
+        so = street_old.get((st, pl))
+        if so: olds_of[len(rows)] = [f'{o}, {hn}' for o in so]
+        rows.append((KIND_ADDR, f'{st}, {hn}', city or pl, la, lo, 10))
     # адреса закладу: власні теги, інакше — найближча адреса в межах 60 м (сітка ~100 м)
     agrid = defaultdict(list)
     for st, hn, city, la, lo in addrs: agrid[(int(la * 1000), int(lo * 1000))].append((la, lo, f'{st}, {hn}'))
@@ -330,16 +361,28 @@ def build_search(pbf, out):
             return r + ((en + ', ' + hn) if en else '', (alt + ' ' + hn) if alt else '')
         return r + info(nm)
     rows = [enrich(r) for r in rows]
-    db.executemany('INSERT INTO item(kind,name,extra,lat,lon,rank,name_en,alt) VALUES(?,?,?,?,?,?,?,?)', rows)
+    # старі назви — у кінець alt (пошук); для адрес — «стара назва вулиці, номер», як і решта alt адреси
+    for i, olds in olds_of.items():
+        r = rows[i]
+        rows[i] = r[:7] + (' '.join(x for x in (r[7],) + tuple(olds) if x),)
+    # id — явно (те саме 1..N, що дала б SQLite сама), щоб oldname.id точно вказував на свій item
+    db.executemany('INSERT INTO item(id,kind,name,extra,lat,lon,rank,name_en,alt) VALUES(?,?,?,?,?,?,?,?,?)',
+                   [(i + 1,) + r for i, r in enumerate(rows)])
+    db.execute('CREATE TABLE oldname(id INTEGER PRIMARY KEY, names TEXT)')   # names — через «;»
+    db.executemany('INSERT INTO oldname(id,names) VALUES(?,?)', [(i + 1, ';'.join(olds)) for i, olds in sorted(olds_of.items())])
+    n_old = [sum(1 for i in olds_of if rows[i][0] == k) for k in (KIND_PLACE, KIND_VILLAGE, KIND_STREET, KIND_ADDR)]
+    kyiv_old = sum(1 for i in olds_of if rows[i][0] == KIND_STREET and rows[i][2] == 'Київ')
     # апострофи в індексі — до одного ’ (U+2019): «Кам'янка», «Камʼянка», «Кам`янка» шукаються однаково (у FTS ’ — роздільник;
     # застосунок ділить запит так само). Назви в item (показ) — як в OSM.
     APOS = str.maketrans({"'": '\u2019', '\u02bc': '\u2019', '`': '\u2019', '\u2018': '\u2019', '\u02b9': '\u2019', '\u00b4': '\u2019'})
     db.create_function('apos', 1, lambda v: v.translate(APOS) if isinstance(v, str) else v, deterministic=True)
     db.execute('INSERT INTO fts(docid,name,extra,alt) SELECT id,apos(name),apos(extra),apos(alt) FROM item')
     db.execute('CREATE INDEX item_ll ON item(lat, lon)')
-    db.executemany('INSERT INTO meta VALUES(?,?)', [('format', 'gnss-search-1'), ('items', str(len(rows))), ('apos', '’')])
+    db.executemany('INSERT INTO meta VALUES(?,?)', [('format', 'gnss-search-1'), ('items', str(len(rows))), ('apos', '’'),
+                                                    ('old', str(len(olds_of)))])
     db.commit(); db.execute("INSERT INTO fts(fts) VALUES('optimize')"); db.commit(); db.execute('VACUUM'); db.close()
     print(f'пошук: пунктів {len(places)}, вулиць {len(streets)}, адрес {len(addrs)}, об\'єктів {len(pois)} (з адресою {with_addr}) → {out} ({os.path.getsize(out)//1024} КБ)')
+    print(f'старі назви: міст {n_old[0]}, сіл {n_old[1]}, вулиць {n_old[2]} (у Києві {kyiv_old}), адрес {n_old[3]}')
 
 
 POI_UK = {'fuel': 'АЗС', 'hospital': 'лікарня', 'pharmacy': 'аптека', 'police': 'поліція', 'cafe': 'кафе',
